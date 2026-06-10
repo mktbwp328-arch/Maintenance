@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ระบบแจ้งซ่อม MTD</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- LOGIN -->
+  <div id="loginScreen" class="login-screen">
+    <form id="loginForm" class="login-card">
+      <div class="login-logo">🔧</div>
+      <h2>ระบบแจ้งซ่อม MTD</h2>
+      <p class="login-sub">Maintenance Request System</p>
+      <label>ชื่อผู้ใช้<input name="username" autocomplete="username" required /></label>
+      <label>รหัสผ่าน<input name="password" type="password" autocomplete="current-password" required /></label>
+      <button type="submit" class="btn-primary login-btn">เข้าสู่ระบบ</button>
+      <div id="loginErr" class="login-err"></div>
+      <div class="login-hint">บัญชีทดลอง: admin/admin123 · tech/tech123 · user/user123</div>
+    </form>
+  </div>
+
+  <div id="appShell" hidden>
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="logo">🔧</span>
+      <div>
+        <h1>MTD</h1>
+        <small>Maintenance</small>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-view="dashboard"><span class="ti">📊</span> หน้าหลัก</button>
+      <button class="tab" data-view="list"><span class="ti">📋</span> <span id="listTabLabel">งานซ่อม</span></button>
+      <button class="tab" data-view="summary" data-staff><span class="ti">📈</span> สรุปปัญหา &amp; สาเหตุ</button>
+      <button class="tab" data-view="pm" data-staff><span class="ti">🛠️</span> ประวัติ PM</button>
+      <button class="tab" data-view="buildings" data-staff><span class="ti">🏢</span> อาคาร</button>
+      <button class="tab" data-view="overview" data-staff><span class="ti">📒</span> ภาพรวมเครื่องจักร</button>
+      <button class="tab" data-view="equipment" data-staff><span class="ti">🖥️</span> เครื่องจักร</button>
+      <button class="tab" data-view="users" data-admin><span class="ti">👤</span> ผู้ใช้งาน</button>
+    </nav>
+    <div class="userbox">
+      <div class="uavatar" id="uAvatar">U</div>
+      <div class="uinfo"><span id="uName"></span><small id="uRole"></small></div>
+      <button class="logout" id="btnLogout" title="ออกจากระบบ">⎋</button>
+    </div>
+  </aside>
+
+  <div class="content">
+    <header class="apphead">
+      <div class="greet">
+        <h2 id="greetTitle">สวัสดี 👋</h2>
+        <p id="greetSub">ภาพรวมระบบแจ้งซ่อมและบำรุงรักษา</p>
+      </div>
+      <div class="head-actions">
+        <div class="head-search">🔎 <input id="headSearch" placeholder="ค้นหางานซ่อม..." /></div>
+        <button class="btn-primary" id="btnNew">+ แจ้งซ่อม</button>
+      </div>
+    </header>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section id="view-dashboard" class="view active">
+      <div class="date-filter">
+        <div class="df-chips">
+          <button class="df-chip" data-range="today">วันนี้</button>
+          <button class="df-chip" data-range="7d">7 วัน</button>
+          <button class="df-chip" data-range="month">เดือนนี้</button>
+          <button class="df-chip active" data-range="all">ทั้งหมด</button>
+          <button class="df-chip" data-range="custom">📅 กำหนดเอง</button>
+        </div>
+        <div class="df-custom" id="dfCustom" hidden>
+          <input type="date" id="dfFrom" /><span>ถึง</span><input type="date" id="dfTo" />
+          <button class="btn-primary df-apply" id="dfApply">ดูข้อมูล</button>
+        </div>
+        <span class="df-label" id="dfLabel"></span>
+      </div>
+      <div id="pmAlert" class="pm-alert" hidden></div>
+      <div class="stat-grid" id="statGrid"></div>
+      <div class="panel-row">
+        <div class="panel">
+          <h3>สรุปสถานะงานซ่อม</h3>
+          <canvas id="statusChart" height="220"></canvas>
+        </div>
+        <div class="panel">
+          <h3>สถิติการซ่อมตามประเภทเครื่องจักร</h3>
+          <canvas id="typeChart" height="220"></canvas>
+        </div>
+      </div>
+      <div id="dashSummary">
+        <h3 class="section-divider">📈 สรุปข้อมูลตามช่วงเวลา</h3>
+        <div class="stat-grid" id="dashSumKpi"></div>
+        <div class="panel-row">
+          <div class="panel"><h3>ปัญหาแยกตามหมวด</h3><canvas id="dashProblemChart" height="220"></canvas></div>
+          <div class="panel"><h3>สัดส่วนความเร่งด่วน</h3><canvas id="dashPriorityChart" height="220"></canvas></div>
+        </div>
+        <div class="panel-row">
+          <div class="panel"><h3>ปัญหาแยกตามแผนก</h3><canvas id="dashDeptChart" height="220"></canvas></div>
+          <div class="panel"><h3>เครื่องจักรที่ซ่อมบ่อยที่สุด (Top 10)</h3><div id="dashTopEquip" class="top-equip"></div></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>งานซ่อมล่าสุด</h3>
+        <div id="recentList" class="recent"></div>
+      </div>
+    </section>
+
+    <!-- LIST -->
+    <section id="view-list" class="view">
+      <div class="toolbar">
+        <input id="search" placeholder="🔎 ค้นหา เลขที่ / ผู้แจ้ง / เครื่องจักร / อาการ" />
+        <select id="filterStatus"><option value="">ทุกสถานะ</option></select>
+      </div>
+      <div id="ticketList" class="ticket-list"></div>
+    </section>
+
+    <!-- PROBLEM SUMMARY -->
+    <section id="view-summary" class="view">
+      <div class="stat-grid" id="summaryKpi"></div>
+      <div class="panel-row">
+        <div class="panel"><h3>ปัญหาแยกตามหมวด (หมวดปัญหา)</h3><canvas id="problemTypeChart" height="240"></canvas></div>
+        <div class="panel"><h3>สัดส่วนความเร่งด่วน</h3><canvas id="priorityChart" height="240"></canvas></div>
+      </div>
+      <div class="panel-row">
+        <div class="panel"><h3>ปัญหาแยกตามแผนก</h3><canvas id="deptChart" height="220"></canvas></div>
+        <div class="panel">
+          <h3>เครื่องจักรที่ซ่อมบ่อยที่สุด (Top 10)</h3>
+          <div id="topEquip" class="top-equip"></div>
+        </div>
+      </div>
+
+      <!-- คลังความรู้ ปัญหา & สาเหตุ (รวมในหน้าเดียว) -->
+      <h3 class="section-divider">💡 คลังปัญหา &amp; สาเหตุ</h3>
+      <div class="toolbar">
+        <input id="searchKb" placeholder="🔎 ค้นหา อาการ / สาเหตุ / วิธีแก้ไข" />
+        <select id="filterKbCat"><option value="">ทุกหมวด</option></select>
+        <button class="btn-primary" id="btnNewKb" style="display:none">+ เพิ่มปัญหา</button>
+      </div>
+      <div id="kbList"></div>
+    </section>
+
+    <!-- PM HISTORY -->
+    <section id="view-pm" class="view">
+      <div class="toolbar">
+        <input id="searchPm" placeholder="🔎 ค้นหา เลขที่ PM / เครื่องจักร / ผู้ดำเนินการ" />
+        <button class="btn-primary" id="btnNewPm" style="color:#fff;background:var(--brand)">+ บันทึก PM</button>
+      </div>
+      <div id="pmList" class="ticket-list"></div>
+    </section>
+
+    <!-- USERS -->
+    <section id="view-users" class="view">
+      <div class="toolbar">
+        <h3 style="margin-right:auto">จัดการผู้ใช้งาน</h3>
+        <button class="btn-primary" id="btnNewUser" style="color:#fff;background:var(--brand)">+ เพิ่มผู้ใช้</button>
+      </div>
+      <div id="userList" class="ticket-list"></div>
+    </section>
+
+    <!-- BUILDINGS -->
+    <section id="view-buildings" class="view">
+      <div class="toolbar">
+        <h3 style="margin-right:auto">อาคารทั้งหมด</h3>
+        <button class="btn-primary" id="btnNewBuilding" style="color:#fff;background:var(--brand);display:none">+ เพิ่มอาคาร</button>
+      </div>
+      <div id="buildingGrid" class="bld-grid"></div>
+    </section>
+
+    <!-- EQUIPMENT OVERVIEW DASHBOARD -->
+    <section id="view-overview" class="view">
+      <div class="stat-grid" id="ovKpi"></div>
+      <div class="toolbar">
+        <input id="searchOv" placeholder="🔎 ค้นหาเครื่องจักร / รหัส / ประเภท / แผนก" />
+        <select id="buildingOv"><option value="">ทุกอาคาร</option></select>
+        <select id="sortOv">
+          <option value="repairs">เรียง: ซ่อมบ่อยสุด</option>
+          <option value="open">เรียง: งานค้างมากสุด</option>
+          <option value="pmdue">เรียง: PM เกินกำหนด</option>
+          <option value="id">เรียง: รหัสเครื่อง</option>
+        </select>
+        <select id="filterOv">
+          <option value="">ทุกสถานะ</option>
+          <option value="repair">🔧 มีงานซ่อมค้าง</option>
+          <option value="pmdue">⏰ PM เกินกำหนด</option>
+          <option value="ok">✅ ปกติ</option>
+          <option value="new">⚪ ยังไม่เคยซ่อม</option>
+        </select>
+      </div>
+      <div class="ov-table-wrap">
+        <table class="ov-table">
+          <thead><tr>
+            <th>เครื่องจักร</th><th>ประเภท</th><th>อาคาร</th><th>แผนก</th>
+            <th class="num">ซ่อม</th><th class="num">ค้าง</th><th>ซ่อมล่าสุด</th>
+            <th class="num">PM</th><th>PM ถัดไป</th><th>สถานะ</th>
+          </tr></thead>
+          <tbody id="ovBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- EQUIPMENT -->
+    <section id="view-equipment" class="view">
+      <div class="toolbar">
+        <input id="searchEq" placeholder="🔎 ค้นหาเครื่องจักร / รหัส / ประเภท" />
+        <button class="btn-primary" id="btnNewEquip" style="display:none">+ เพิ่มเครื่องจักร</button>
+      </div>
+      <div id="equipmentGrid" class="eq-grid"></div>
+    </section>
+  </main>
+  </div><!-- /content -->
+
+  <!-- NEW TICKET MODAL -->
+  <div class="modal-bg" id="modalNew">
+    <div class="modal">
+      <div class="modal-head"><h2>แจ้งซ่อมใหม่</h2><button class="x" data-close>✕</button></div>
+      <form id="formNew" class="modal-body">
+        <div class="grid2">
+          <label>ชื่อผู้แจ้ง *<input name="reporter" required /></label>
+          <label>เบอร์โทร<input name="phone" /></label>
+          <label>อีเมล<input name="email" type="email" placeholder="สำหรับรับการแจ้งเตือน" /></label>
+          <label>ความเร่งด่วน
+            <select name="priority" id="selPriority"></select>
+          </label>
+        </div>
+        <label>เครื่องจักร / อาคาร ที่ต้องการแจ้งซ่อม *
+          <select name="equipmentId" id="selEquipment" required>
+            <option value="">— เลือกเครื่องจักร / อาคาร —</option>
+          </select>
+        </label>
+        <div id="eqInfo" class="eq-info" hidden></div>
+        <label>หมวดปัญหา
+          <input name="problemType" list="problemTypes" placeholder="เช่น ไฟฟ้า / เครื่องกล / หน้าจอควบคุม" />
+          <datalist id="problemTypes">
+            <option value="ไฟฟ้า"></option><option value="เครื่องกล"></option>
+            <option value="ระบบลม"></option><option value="ระบบทำความเย็น"></option>
+            <option value="หน้าจอควบคุม"></option><option value="อื่นๆ"></option>
+          </datalist>
+        </label>
+        <label>อาการ / รายละเอียดปัญหา *
+          <textarea name="detail" rows="4" required placeholder="อธิบายอาการที่พบ..."></textarea>
+        </label>
+        <div class="modal-foot">
+          <button type="button" class="btn-ghost" data-close>ยกเลิก</button>
+          <button type="submit" class="btn-primary">ส่งใบแจ้งซ่อม</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- DETAIL MODAL -->
+  <div class="modal-bg" id="modalDetail">
+    <div class="modal">
+      <div class="modal-head"><h2 id="dTitle">รายละเอียดงานซ่อม</h2><button class="x" data-close>✕</button></div>
+      <div class="modal-body" id="dBody"></div>
+    </div>
+  </div>
+
+  <!-- NEW EQUIPMENT MODAL -->
+  <div class="modal-bg" id="modalEquipNew">
+    <div class="modal">
+      <div class="modal-head"><h2>เพิ่มเครื่องจักร</h2><button class="x" data-close>✕</button></div>
+      <form id="formEquip" class="modal-body">
+        <div class="grid2">
+          <label>รหัสเครื่องจักร *<input name="id" required placeholder="เช่น BL-PRO-12" /></label>
+          <label>S/N<input name="sn" placeholder="-" /></label>
+        </div>
+        <label>ชื่อเครื่องจักร *<input name="name" required placeholder="เช่น เครื่องเป่าฟิล์มหด 12" /></label>
+        <div class="grid2">
+          <label>ประเภท<input name="type" list="equipTypes" placeholder="เช่น Blowing" /><datalist id="equipTypes"></datalist></label>
+          <label>อาคาร<select name="building" id="equipBuilding"><option value="">— เลือกอาคาร —</option></select></label>
+          <label>แผนก<input name="dept" list="equipDepts" placeholder="เช่น Blowing Production" /><datalist id="equipDepts"></datalist></label>
+          <label>สถานที่<input name="location" placeholder="เช่น รง.ฝ่ายผลิตเป่า" /></label>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn-ghost" data-close>ยกเลิก</button>
+          <button type="submit" class="btn-primary">บันทึก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- NEW KB MODAL -->
+  <div class="modal-bg" id="modalKb">
+    <div class="modal">
+      <div class="modal-head"><h2>เพิ่มปัญหา &amp; สาเหตุ</h2><button class="x" data-close>✕</button></div>
+      <form id="formKb" class="modal-body">
+        <label>หมวด *
+          <input name="category" list="kbCats" required placeholder="เช่น ไฟฟ้า / เครื่องกล / งานอาคาร" />
+          <datalist id="kbCats"></datalist>
+        </label>
+        <label>อาการ / ปัญหา *<input name="problem" required placeholder="เช่น มอเตอร์ร้อนผิดปกติ" /></label>
+        <label>สาเหตุ<textarea name="cause" rows="2" placeholder="สาเหตุที่เป็นไปได้"></textarea></label>
+        <label>วิธีแก้ไข<textarea name="solution" rows="3" placeholder="แนวทางการแก้ไข"></textarea></label>
+        <div class="modal-foot">
+          <button type="button" class="btn-ghost" data-close>ยกเลิก</button>
+          <button type="submit" class="btn-primary">บันทึก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- BUILDING MACHINES MODAL -->
+  <div class="modal-bg" id="modalBuilding">
+    <div class="modal">
+      <div class="modal-head"><h2 id="bTitle">อาคาร</h2><button class="x" data-close>✕</button></div>
+      <div class="modal-body" id="bBody"></div>
+    </div>
+  </div>
+
+  <!-- NEW BUILDING MODAL -->
+  <div class="modal-bg" id="modalNewBuilding">
+    <div class="modal">
+      <div class="modal-head"><h2>เพิ่มอาคาร</h2><button class="x" data-close>✕</button></div>
+      <form id="formBuilding" class="modal-body">
+        <label>ชื่ออาคาร *<input name="name" required placeholder="เช่น อาคาร 4 / คลังสินค้า" /></label>
+        <label>รายละเอียด<input name="note" placeholder="เช่น คลังเก็บวัตถุดิบ" /></label>
+        <div class="modal-foot">
+          <button type="button" class="btn-ghost" data-close>ยกเลิก</button>
+          <button type="submit" class="btn-primary" style="color:#fff;background:var(--brand)">บันทึก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- EQUIPMENT HISTORY MODAL -->
+  <div class="modal-bg" id="modalEquip">
+    <div class="modal">
+      <div class="modal-head"><h2 id="eqTitle">ประวัติเครื่องจักร</h2><button class="x" data-close>✕</button></div>
+      <div class="modal-body" id="eqBody"></div>
+    </div>
+  </div>
+
+  <!-- NEW PM MODAL -->
+  <div class="modal-bg" id="modalPm">
+    <div class="modal">
+      <div class="modal-head"><h2>บันทึกการบำรุงรักษา (PM)</h2><button class="x" data-close>✕</button></div>
+      <form id="formPm" class="modal-body">
+        <label>เครื่องจักร / อุปกรณ์ *
+          <select name="equipmentId" id="pmEquipment" required><option value="">— เลือกเครื่องจักร —</option></select>
+        </label>
+        <div class="grid2">
+          <label>ประเภทงาน PM<select name="type" id="pmType"></select></label>
+          <label>วันที่ดำเนินการ<input name="date" type="date" /></label>
+          <label>ผู้ดำเนินการ<input name="performedBy" placeholder="เว้นว่าง = ใช้ชื่อผู้ล็อกอิน" /></label>
+          <label>กำหนด PM ครั้งถัดไป<input name="nextDue" type="date" /></label>
+        </div>
+        <label>ผลการตรวจ
+          <select name="result"><option>ปกติ</option><option>พบความผิดปกติ</option><option>ต้องติดตาม</option><option>แจ้งซ่อมต่อ</option></select>
+        </label>
+        <label>รายละเอียด / สิ่งที่ดำเนินการ<textarea name="detail" rows="3"></textarea></label>
+        <div class="modal-foot">
+          <button type="button" class="btn-ghost" data-close>ยกเลิก</button>
+          <button type="submit" class="btn-primary" style="color:#fff;background:var(--brand)">บันทึก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- NEW USER MODAL -->
+  <div class="modal-bg" id="modalUser">
+    <div class="modal">
+      <div class="modal-head"><h2>เพิ่มผู้ใช้งาน</h2><button class="x" data-close>✕</button></div>
+      <form id="formUser" class="modal-body">
+        <div class="grid2">
+          <label>ชื่อผู้ใช้ (username) *<input name="username" required /></label>
+          <label>ชื่อ-สกุล *<input name="name" required /></label>
+          <label>รหัสผ่าน *<input name="password" type="text" required /></label>
+          <label>บทบาท *<select name="role" id="userRole"></select></label>
+        </div>
+        <label>อีเมล (รับการแจ้งเตือน)<input name="email" type="email" /></label>
+        <div class="modal-foot">
+          <button type="button" class="btn-ghost" data-close>ยกเลิก</button>
+          <button type="submit" class="btn-primary" style="color:#fff;background:var(--brand)">บันทึก</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  </div><!-- /appShell -->
+
+  <div id="toast" class="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>

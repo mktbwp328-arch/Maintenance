@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>แจ้งซ่อม MTD (LINE)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    :root{--bg:#14161c;--card:#1e2128;--card2:#252934;--ink:#e9ebf2;--muted:#8b90a3;--line:rgba(255,255,255,.08);--brand:#06c755;--brand2:#16a34a}
+    *{box-sizing:border-box}body{margin:0;font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--ink);padding:18px;max-width:560px;margin:0 auto}
+    .head{display:flex;align-items:center;gap:10px;margin-bottom:6px}.head .logo{font-size:26px}
+    h1{font-size:19px;margin:0}.sub{color:var(--muted);font-size:12px;margin:0 0 16px}
+    .who{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:13px;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+    .who img{width:34px;height:34px;border-radius:50%}
+    label{display:block;font-size:13px;font-weight:600;margin-bottom:14px}
+    input,select,textarea{width:100%;margin-top:6px;padding:12px 13px;border:1px solid var(--line);border-radius:11px;font:inherit;background:var(--card2);color:var(--ink)}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brand)}
+    .eqinfo{background:var(--card2);border:1px solid var(--line);border-radius:11px;padding:11px 13px;font-size:12.5px;color:var(--muted);margin-bottom:14px}
+    button{width:100%;padding:14px;border:0;border-radius:12px;font:inherit;font-weight:700;font-size:15px;background:var(--brand);color:#fff;cursor:pointer}
+    button:disabled{opacity:.5}
+    .msg{text-align:center;padding:40px 20px}.msg .ic{font-size:54px}.msg h2{margin:10px 0 4px}.msg p{color:var(--muted)}
+    .ok-no{font-size:22px;font-weight:700;color:var(--brand)}
+    .err{color:#f87171;font-size:13px;margin-top:8px;text-align:center}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <div id="loading" class="msg"><div class="ic">⏳</div><p>กำลังเชื่อมต่อ LINE...</p></div>
+
+  <div id="setup" class="msg hidden">
+    <div class="ic">⚙️</div><h2>ยังไม่ได้ตั้งค่า LIFF</h2>
+    <p>กรุณาตั้งค่า <b>LIFF_ID</b> ใน .env แล้วลงทะเบียน LIFF app ใน LINE Developers<br>ดูขั้นตอนใน README หัวข้อ "แจ้งซ่อมผ่านไลน์"</p>
+  </div>
+
+  <form id="form" class="hidden">
+    <div class="head"><span class="logo">🔧</span><div><h1>แจ้งซ่อม MTD</h1><p class="sub">ผ่าน LINE</p></div></div>
+    <div class="who" id="who"></div>
+    <label>เครื่องจักร / อาคาร *
+      <select id="equipmentId" required><option value="">— เลือก —</option></select>
+    </label>
+    <div id="eqinfo" class="eqinfo hidden"></div>
+    <label>หมวดปัญหา
+      <input id="problemType" list="ptypes" placeholder="เช่น ไฟฟ้า / เครื่องกล" />
+      <datalist id="ptypes"><option>ไฟฟ้า</option><option>เครื่องกล</option><option>ระบบลม</option><option>ระบบทำความเย็น</option><option>หน้าจอควบคุม</option><option>งานอาคาร</option></datalist>
+    </label>
+    <label>ความเร่งด่วน<select id="priority"></select></label>
+    <label>อาการ / รายละเอียดปัญหา *<textarea id="detail" rows="4" required placeholder="อธิบายอาการที่พบ..."></textarea></label>
+    <button type="submit" id="submitBtn">ส่งแจ้งซ่อม</button>
+    <div class="err" id="err"></div>
+  </form>
+
+  <div id="done" class="msg hidden">
+    <div class="ic">✅</div><h2>ส่งแจ้งซ่อมแล้ว</h2>
+    <p>เลขที่ใบแจ้งซ่อม</p><div class="ok-no" id="doneNo"></div>
+    <p id="doneEq" style="margin-top:8px"></p>
+    <button style="margin-top:18px;background:var(--card2);color:var(--ink)" onclick="location.reload()">แจ้งซ่อมอีกรายการ</button>
+  </div>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const esc = (s='') => String(s).replace(/[&<>"]/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    let META = null, IDTOKEN = '';
+
+    async function boot() {
+      let cfg;
+      try { cfg = await (await fetch('/api/line/config')).json(); } catch { return showSetup(); }
+      if (!cfg.configured || !cfg.liffId) return showSetup();
+      try {
+        await liff.init({ liffId: cfg.liffId });
+        if (!liff.isLoggedIn()) { liff.login(); return; }
+        const profile = await liff.getProfile();
+        IDTOKEN = liff.getIDToken() || '';
+        $('#who').innerHTML = `${profile.pictureUrl ? `<img src="${profile.pictureUrl}">` : '👤'} <span>ผู้แจ้ง: <b>${esc(profile.displayName)}</b></span>`;
+        window.__reporter = profile.displayName;
+        await loadForm();
+      } catch (e) { showSetup(); }
+    }
+    function showSetup(){ $('#loading').classList.add('hidden'); $('#setup').classList.remove('hidden'); }
+
+    async function loadForm() {
+      META = await (await fetch('/api/meta')).json();
+      // priorities
+      $('#priority').innerHTML = META.priorities.map((p)=>`<option>${esc(p)}</option>`).join('');
+      // equipment grouped: buildings first, then by type
+      const buildings = [...new Set(META.equipment.map((e)=>e.building).filter(Boolean))].sort();
+      let opts = buildings.length ? `<optgroup label="🏢 อาคาร / สถานที่">${buildings.map((b)=>`<option value="BLD::${esc(b)}">🏢 ${esc(b)}</option>`).join('')}</optgroup>` : '';
+      const groups = {}; META.equipment.forEach((e)=>{(groups[e.type] ||= []).push(e);});
+      opts += Object.entries(groups).map(([t,items])=>`<optgroup label="${esc(t)}">${items.map((e)=>`<option value="${esc(e.id)}">${esc(e.id)} — ${esc(e.name)}</option>`).join('')}</optgroup>`).join('');
+      $('#equipmentId').insertAdjacentHTML('beforeend', opts);
+      $('#loading').classList.add('hidden'); $('#form').classList.remove('hidden');
+    }
+
+    $('#equipmentId').addEventListener('change', (e)=>{
+      const v = e.target.value, box = $('#eqinfo');
+      if (v.startsWith('BLD::')) { box.classList.remove('hidden'); box.innerHTML = `🏢 <b>${esc(v.slice(5))}</b> · แจ้งซ่อมงานอาคาร`; return; }
+      const eq = META.equipment.find((x)=>x.id===v);
+      if (eq) { box.classList.remove('hidden'); box.innerHTML = `ประเภท: <b>${esc(eq.type)}</b> · แผนก: ${esc(eq.dept)} · 📍 ${esc(eq.location)}`; }
+      else box.classList.add('hidden');
+    });
+
+    $('#form').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      $('#err').textContent = '';
+      const btn = $('#submitBtn'); btn.disabled = true; btn.textContent = 'กำลังส่ง...';
+      try {
+        const res = await fetch('/api/line/ticket', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
+          idToken: IDTOKEN, reporter: window.__reporter,
+          equipmentId: $('#equipmentId').value, problemType: $('#problemType').value,
+          priority: $('#priority').value, detail: $('#detail').value,
+        })});
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'เกิดข้อผิดพลาด');
+        $('#form').classList.add('hidden');
+        $('#doneNo').textContent = data.no;
+        $('#doneEq').textContent = data.equipmentName || '';
+        $('#done').classList.remove('hidden');
+      } catch (err) { $('#err').textContent = '⚠️ ' + err.message; btn.disabled = false; btn.textContent = 'ส่งแจ้งซ่อม'; }
+    });
+
+    boot();
+  </script>
+</body>
+</html>
