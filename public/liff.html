@@ -29,8 +29,10 @@
   <div id="loading" class="msg"><div class="ic">⏳</div><p>กำลังเชื่อมต่อ LINE...</p></div>
 
   <div id="setup" class="msg hidden">
-    <div class="ic">⚙️</div><h2>ยังไม่ได้ตั้งค่า LIFF</h2>
-    <p>กรุณาตั้งค่า <b>LIFF_ID</b> ใน .env แล้วลงทะเบียน LIFF app ใน LINE Developers<br>ดูขั้นตอนใน README หัวข้อ "แจ้งซ่อมผ่านไลน์"</p>
+    <div class="ic">⚙️</div><h2>เปิดฟอร์มไม่สำเร็จ</h2>
+    <p id="setupMsg">กรุณาเปิดผ่านแอป LINE (กดลิงก์ LIFF)</p>
+    <p id="setupErr" style="color:#f87171;font-size:13px;margin-top:10px;word-break:break-word"></p>
+    <button style="margin-top:18px;background:var(--card2);color:var(--ink)" onclick="location.reload()">ลองใหม่</button>
   </div>
 
   <form id="form" class="hidden">
@@ -64,19 +66,22 @@
 
     async function boot() {
       let cfg;
-      try { cfg = await (await fetch('/api/line/config')).json(); } catch { return showSetup(); }
-      if (!cfg.configured || !cfg.liffId) return showSetup();
+      try { cfg = await (await fetch('/api/line/config')).json(); } catch (e) { return showSetup('โหลด config ไม่ได้: ' + e.message); }
+      if (!cfg.configured || !cfg.liffId) return showSetup('ยังไม่ได้ตั้ง LIFF_ID ใน env');
+      if (typeof liff === 'undefined') return showSetup('โหลด LIFF SDK ไม่สำเร็จ (เน็ตช้า?) — ลองใหม่');
       try {
         await liff.init({ liffId: cfg.liffId });
+      } catch (e) { return showSetup('liff.init ล้มเหลว: ' + (e.message || e) + ' (เช็ค Endpoint URL/Scopes ใน LINE Developers)'); }
+      try {
         if (!liff.isLoggedIn()) { liff.login(); return; }
         const profile = await liff.getProfile();
         IDTOKEN = liff.getIDToken() || '';
         $('#who').innerHTML = `${profile.pictureUrl ? `<img src="${profile.pictureUrl}">` : '👤'} <span>ผู้แจ้ง: <b>${esc(profile.displayName)}</b></span>`;
         window.__reporter = profile.displayName;
         await loadForm();
-      } catch (e) { showSetup(); }
+      } catch (e) { showSetup('ดึงข้อมูลผู้ใช้/ฟอร์มไม่ได้: ' + (e.message || e)); }
     }
-    function showSetup(){ $('#loading').classList.add('hidden'); $('#setup').classList.remove('hidden'); }
+    function showSetup(msg){ $('#loading').classList.add('hidden'); $('#setup').classList.remove('hidden'); if(msg) $('#setupErr').textContent = msg; }
 
     async function loadForm() {
       META = await (await fetch('/api/meta')).json();
