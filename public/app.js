@@ -287,7 +287,10 @@ function ticketRow(t) {
       <div class="meta">ผู้แจ้ง: ${esc(t.reporter || '-')} · ${esc(t.detail || '').slice(0, 60)}</div>
       <span class="pri" style="color:${PRI_COLORS[t.priority]}">● ${esc(t.priority)}</span>
     </div>
-    <span class="badge" style="background:${STATUS_COLORS[t.status]}">${esc(t.status)}</span>
+    <div class="ticket-end">
+      <span class="badge" style="background:${STATUS_COLORS[t.status]}">${esc(t.status)}</span>
+      ${ME?.role === 'admin' ? `<button class="row-del" data-del="${t.id}" title="ลบใบแจ้งซ่อม">🗑️</button>` : ''}
+    </div>
   </div>`;
 }
 async function loadTickets() {
@@ -302,6 +305,15 @@ async function loadTickets() {
 }
 function bindTicketRows(sel) {
   $$(sel + ' .ticket').forEach((el) => el.addEventListener('click', () => openDetail(el.dataset.id)));
+  $$(sel + ' .row-del').forEach((b) => b.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (!confirm('ลบใบแจ้งซ่อมนี้?\nการลบเป็นการถาวร กู้คืนไม่ได้')) return;
+    try {
+      await api('/api/tickets/' + b.dataset.del, { method: 'DELETE' });
+      toast('🗑️ ลบใบแจ้งซ่อมแล้ว');
+      loadDashboard(); if ($('#view-list').classList.contains('active')) loadTickets();
+    } catch (err) { toast('⚠️ ' + err.message); }
+  }));
 }
 $('#search').addEventListener('input', debounce(loadTickets, 300));
 $('#filterStatus').addEventListener('change', loadTickets);
@@ -712,6 +724,26 @@ async function openDetail(id) {
         : `<p style="color:var(--muted);font-size:13px;margin:0">✔️ งานนี้ปิดแล้ว (${esc(t.status)}) — ไม่สามารถเปลี่ยนสถานะต่อได้</p>`}
     </div>` : `<div class="d-section"><div class="d-row"><span class="k">ผู้ดำเนินการ</span><span>${esc(t.assignee || '-')}</span></div>
       <div class="d-row"><span class="k">การแก้ไข</span><span>${esc(t.solution || '-')}</span></div></div>`;
+  const inp = 'width:100%;margin-top:5px;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--card2);color:var(--ink)';
+  const adminBlock = ME?.role === 'admin' ? `
+    <div class="d-section" style="border-top:1px dashed var(--line);padding-top:14px">
+      <h3 style="font-size:14px;margin-bottom:8px">✏️ แก้ไขใบแจ้งซ่อม (แอดมิน)</h3>
+      <div class="grid2">
+        <label style="font-size:13px;font-weight:600">ผู้แจ้ง<input id="eReporter" value="${esc(t.reporter)}" style="${inp}"></label>
+        <label style="font-size:13px;font-weight:600">เบอร์โทร<input id="ePhone" value="${esc(t.phone)}" style="${inp}"></label>
+      </div>
+      <label style="font-size:13px;font-weight:600;display:block;margin-top:10px">เครื่องจักร / อาคาร
+        <select id="eEquip" style="${inp}"></select></label>
+      <div class="grid2" style="margin-top:10px">
+        <label style="font-size:13px;font-weight:600">หมวดปัญหา<input id="eProblem" value="${esc(t.problemType)}" style="${inp}"></label>
+        <label style="font-size:13px;font-weight:600">ความเร่งด่วน<select id="ePriority" style="${inp}">${META.priorities.map((p) => `<option${p === t.priority ? ' selected' : ''}>${esc(p)}</option>`).join('')}</select></label>
+      </div>
+      <label style="font-size:13px;font-weight:600;display:block;margin-top:10px">อาการ<textarea id="eDetail" rows="2" style="${inp}">${esc(t.detail)}</textarea></label>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn-primary" id="eSave">💾 บันทึกการแก้ไข</button>
+        <button class="btn-ghost" id="eDelete" style="color:#f87171;border-color:#f87171">🗑️ ลบใบนี้</button>
+      </div>
+    </div>` : '';
   $('#dBody').innerHTML = `
     <div class="d-section">
       ${row('เครื่องจักร', `${t.equipmentId} ${t.equipmentName}`)}
@@ -722,6 +754,7 @@ async function openDetail(id) {
       ${row('ผู้แจ้ง', `${t.reporter} ${t.phone ? '· ' + t.phone : ''} ${t.email ? '· ' + t.email : ''}`)}
     </div>
     ${editBlock}
+    ${adminBlock}
     <div class="d-section">
       <h3 style="font-size:14px">ประวัติการดำเนินการ</h3>
       <ul class="timeline">${t.history.map((h) =>
@@ -742,6 +775,31 @@ async function openDetail(id) {
         await api('/api/tickets/' + t.id, { method: 'PATCH', body: JSON.stringify({ status: ns, assignee: $('#dAssignee').value, solution: $('#dSolution').value }) });
         $('#modalDetail').classList.remove('open');
         toast(`📌 อัปเดตสถานะเป็น "${ns}" และแจ้งเตือนแล้ว`);
+        loadDashboard(); if ($('#view-list').classList.contains('active')) loadTickets();
+      } catch (e) { toast('⚠️ ' + e.message); }
+    });
+  }
+
+  if (ME?.role === 'admin') {
+    fillEquipSelect($('#eEquip'));
+    $('#eEquip').value = t.equipmentId;
+    $('#eSave').addEventListener('click', async () => {
+      try {
+        await api('/api/tickets/' + t.id, { method: 'PATCH', body: JSON.stringify({
+          reporter: $('#eReporter').value, phone: $('#ePhone').value, equipmentId: $('#eEquip').value,
+          problemType: $('#eProblem').value, priority: $('#ePriority').value, detail: $('#eDetail').value,
+        }) });
+        $('#modalDetail').classList.remove('open');
+        toast('💾 แก้ไขใบแจ้งซ่อมแล้ว');
+        loadDashboard(); if ($('#view-list').classList.contains('active')) loadTickets();
+      } catch (e) { toast('⚠️ ' + e.message); }
+    });
+    $('#eDelete').addEventListener('click', async () => {
+      if (!confirm(`ลบใบแจ้งซ่อม ${t.no}?\nการลบเป็นการถาวร กู้คืนไม่ได้`)) return;
+      try {
+        await api('/api/tickets/' + t.id, { method: 'DELETE' });
+        $('#modalDetail').classList.remove('open');
+        toast('🗑️ ลบใบแจ้งซ่อมแล้ว');
         loadDashboard(); if ($('#view-list').classList.contains('active')) loadTickets();
       } catch (e) { toast('⚠️ ' + e.message); }
     });

@@ -15,7 +15,7 @@ if (fs.existsSync(envPath)) {
 
 const {
   STATUSES, PRIORITIES, PM_TYPES, getEquipment, usingSupabase, seedSupabase,
-  listTickets, getTicket, createTicket, updateTicket, stats,
+  listTickets, getTicket, createTicket, updateTicket, deleteTicket, stats,
   listPM, createPM, deletePM, pmDue,
   equipmentHistory, problemSummary, equipmentOverview, createEquipment,
   listBuildings, createBuilding, deleteBuilding, buildingOverview, buildingHistory, seedBuildings,
@@ -134,6 +134,11 @@ app.patch('/api/tickets/:id', roleRequired('admin', 'technician'), wrap(async (r
   if (!result) return res.status(404).json({ error: 'not found' });
   if (result.statusChanged) notifyStatus(result.ticket).catch((e) => console.error('notify error', e));
   res.json(result.ticket);
+}));
+app.delete('/api/tickets/:id', roleRequired('admin'), wrap(async (req, res) => {
+  const ok = await deleteTicket(req.params.id);
+  if (!ok) return res.status(404).json({ error: 'not found' });
+  res.json({ ok: true });
 }));
 
 // ---------- PM ----------

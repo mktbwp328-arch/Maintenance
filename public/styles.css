@@ -113,6 +113,9 @@ main { padding: 18px 28px 36px; }
 .ticket .meta { color: var(--muted); font-size: 13px; }
 .ticket .det { font-size: 14px; }
 .badge { padding: 5px 13px; border-radius: 999px; font-size: 12.5px; font-weight: 700; white-space: nowrap; color: #14161c; }
+.ticket-end { display: flex; align-items: center; gap: 8px; }
+.row-del { background: rgba(248,113,113,.12); border: 0; color: var(--c-red); width: 34px; height: 34px; border-radius: 9px; cursor: pointer; font-size: 14px; flex-shrink: 0; }
+.row-del:hover { background: var(--c-red); color: #fff; }
 .pri { font-size: 12px; font-weight: 600; }
 
 /* ===== Equipment grid ===== */
