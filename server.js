@@ -20,8 +20,9 @@ const {
   equipmentHistory, problemSummary, equipmentOverview, createEquipment,
   listBuildings, createBuilding, deleteBuilding, buildingOverview, buildingHistory, seedBuildings,
   listKB, createKB, deleteKB, seedKB,
+  getSetting, setSetting,
 } = await import('./lib/store.js');
-const { notifyNew, notifyStatus, channelStatus } = await import('./lib/notify.js');
+const { notifyNew, notifyStatus, channelStatus, replyLine } = await import('./lib/notify.js');
 const { verifyLineIdToken, liffConfigured, liffId } = await import('./lib/line.js');
 const {
   ROLES, login, logout, listUsers, createUser, deleteUser, resetPassword,
@@ -61,6 +62,25 @@ app.get('/api/meta', (req, res) => {
 
 // ---------- LINE / LIFF (public — สำหรับแจ้งซ่อมผ่านไลน์) ----------
 app.get('/api/line/config', (req, res) => res.json({ liffId: liffId(), configured: liffConfigured() }));
+
+// Webhook: จับ groupId ของกลุ่มอัตโนมัติ (พิมพ์อะไรก็ได้ในกลุ่มที่มีบอท 1 ครั้ง)
+app.post('/api/line/webhook', (req, res) => {
+  res.sendStatus(200); // ตอบ LINE ทันที
+  (async () => {
+    for (const ev of (req.body?.events || [])) {
+      const src = ev.source || {};
+      const gid = src.groupId || src.roomId;
+      try {
+        if (gid) {
+          await setSetting('line_group_id', gid);
+          if (ev.replyToken) await replyLine(ev.replyToken, '✅ ตั้งกลุ่มนี้ให้รับแจ้งซ่อมแล้ว\nต่อจากนี้ใบแจ้งซ่อมใหม่จะส่งเข้ากลุ่มนี้อัตโนมัติ');
+        } else if (ev.replyToken && src.userId) {
+          await replyLine(ev.replyToken, `User ID ของคุณ:\n${src.userId}`);
+        }
+      } catch (e) { console.error('webhook error', e.message); }
+    }
+  })();
+});
 app.post('/api/line/ticket', wrap(async (req, res) => {
   const { idToken, equipmentId, detail } = req.body;
   let lineName = '', lineSub = '';

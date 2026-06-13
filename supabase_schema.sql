@@ -86,6 +86,12 @@ create table if not exists public.problem_kb (
   created_at timestamptz default now()
 );
 
+-- ---------- การตั้งค่าทั่วไป (เช่น groupId ของไลน์) ----------
+create table if not exists public.settings (
+  key   text primary key,
+  value text
+);
+
 -- ---------- ตัวนับสำหรับออกเลขที่เอกสารแบบอะตอมมิก ----------
 create table if not exists public.counters (
   key text primary key,
