@@ -90,7 +90,7 @@ app.post('/api/line/ticket', wrap(async (req, res) => {
   const reporter = (req.body.reporter || lineName || '').trim();
   if (!reporter || !equipmentId || !detail) return res.status(400).json({ error: 'กรุณากรอก ผู้แจ้ง, เครื่องจักร และอาการ' });
   const t = await createTicket({ ...req.body, reporter, createdBy: lineSub ? 'line:' + lineSub : 'line' });
-  notifyNew(t).catch((e) => console.error('notify error', e));
+  await notifyNew(t).catch((e) => console.error('notify error', e));
   res.status(201).json({ no: t.no, status: t.status, equipmentName: t.equipmentName });
 }));
 
@@ -142,7 +142,7 @@ app.post('/api/tickets', wrap(async (req, res) => {
   const { reporter, equipmentId, detail } = req.body;
   if (!reporter || !equipmentId || !detail) return res.status(400).json({ error: 'กรุณากรอก ผู้แจ้ง, เครื่องจักร และอาการ' });
   const t = await createTicket({ ...req.body, createdBy: req.user.username });
-  notifyNew(t).catch((e) => console.error('notify error', e));
+  await notifyNew(t).catch((e) => console.error('notify error', e));
   res.status(201).json(t);
 }));
 app.patch('/api/tickets/:id', roleRequired('admin', 'technician'), wrap(async (req, res) => {
@@ -151,7 +151,7 @@ app.patch('/api/tickets/:id', roleRequired('admin', 'technician'), wrap(async (r
   try { result = await updateTicket(req.params.id, { ...req.body, note }); }
   catch (e) { return res.status(400).json({ error: e.message }); }
   if (!result) return res.status(404).json({ error: 'not found' });
-  if (result.statusChanged) notifyStatus(result.ticket).catch((e) => console.error('notify error', e));
+  if (result.statusChanged) await notifyStatus(result.ticket).catch((e) => console.error('notify error', e));
   res.json(result.ticket);
 }));
 app.delete('/api/tickets/:id', roleRequired('admin'), wrap(async (req, res) => {
