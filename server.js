@@ -63,18 +63,28 @@ app.get('/api/meta', (req, res) => {
 // ---------- LINE / LIFF (public — สำหรับแจ้งซ่อมผ่านไลน์) ----------
 app.get('/api/line/config', (req, res) => res.json({ liffId: liffId(), configured: liffConfigured() }));
 
-// Webhook: จับ groupId ของกลุ่มอัตโนมัติ (พิมพ์อะไรก็ได้ในกลุ่มที่มีบอท 1 ครั้ง)
+// Webhook: ลงทะเบียนกลุ่ม "เฉพาะ" เมื่อพิมพ์คำสั่ง (บอทไม่ตอบการสนทนาทั่วไป)
+// - พิมพ์ "ลงทะเบียนกลุ่ม" ในกลุ่ม -> ตั้งกลุ่มนี้รับแจ้งซ่อม
+// - พิมพ์ "myid" ในแชตส่วนตัว    -> บอทบอก User ID
 // หมายเหตุ: บน serverless ต้อง await งานให้เสร็จ "ก่อน" ตอบ response (ไม่งั้นถูกตัดทิ้ง)
+const REGISTER_CMD = 'ลงทะเบียนกลุ่ม';
 app.post('/api/line/webhook', async (req, res) => {
   try {
     for (const ev of (req.body?.events || [])) {
+      // สนใจเฉพาะข้อความตัวอักษรเท่านั้น — เหตุการณ์อื่น (เข้า/ออกกลุ่ม, สติกเกอร์ ฯลฯ) ข้ามไป
+      if (ev.type !== 'message' || ev.message?.type !== 'text') continue;
+      const text = (ev.message.text || '').trim();
       const src = ev.source || {};
       const gid = src.groupId || src.roomId;
       if (gid) {
-        await setSetting('line_group_id', gid);
-        if (ev.replyToken) await replyLine(ev.replyToken, '✅ ตั้งกลุ่มนี้ให้รับแจ้งซ่อมแล้ว\nต่อจากนี้ใบแจ้งซ่อมใหม่จะส่งเข้ากลุ่มนี้อัตโนมัติ');
-      } else if (ev.replyToken && src.userId) {
-        await replyLine(ev.replyToken, `User ID ของคุณ:\n${src.userId}`);
+        // อยู่ในกลุ่ม: ตอบ "เฉพาะ" เมื่อพิมพ์คำสั่งลงทะเบียน — นอกนั้นเงียบสนิท
+        if (text === REGISTER_CMD) {
+          await setSetting('line_group_id', gid);
+          if (ev.replyToken) await replyLine(ev.replyToken, '✅ ตั้งกลุ่มนี้ให้รับแจ้งซ่อมแล้ว\nต่อจากนี้ใบแจ้งซ่อมใหม่จะส่งเข้ากลุ่มนี้อัตโนมัติ');
+        }
+      } else if (src.userId && text.toLowerCase() === 'myid') {
+        // แชตส่วนตัว: บอก User ID เฉพาะเมื่อพิมพ์ "myid"
+        if (ev.replyToken) await replyLine(ev.replyToken, `User ID ของคุณ:\n${src.userId}`);
       }
     }
   } catch (e) { console.error('webhook error', e.message); }
