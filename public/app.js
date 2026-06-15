@@ -687,11 +687,42 @@ $('#selEquipment').addEventListener('change', (e) => {
   if (eq) { box.hidden = false; box.innerHTML = `ประเภท: <b>${esc(eq.type)}</b> · 🏢 <b>${esc(eq.building || '-')}</b> · แผนก: <b>${esc(eq.dept)}</b> · สถานที่: ${esc(eq.location)} · S/N: ${esc(eq.sn)}`; }
   else box.hidden = true;
 });
+// ---------- photo upload (resize to data URL) ----------
+let nPhotoData = '';
+function resizeImage(file, maxSize = 1280, quality = 0.7) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > height && width > maxSize) { height = Math.round(height * maxSize / width); width = maxSize; }
+      else if (height > maxSize) { width = Math.round(width * maxSize / height); height = maxSize; }
+      const cv = document.createElement('canvas');
+      cv.width = width; cv.height = height;
+      cv.getContext('2d').drawImage(img, 0, 0, width, height);
+      resolve(cv.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+$('#nPhoto').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) { nPhotoData = ''; $('#nPhotoPreview').hidden = true; return; }
+  try {
+    nPhotoData = await resizeImage(file);
+    $('#nPhotoImg').src = nPhotoData; $('#nPhotoPreview').hidden = false;
+  } catch { toast('⚠️ อ่านรูปไม่สำเร็จ'); nPhotoData = ''; }
+});
+$('#nPhotoClear').addEventListener('click', () => {
+  nPhotoData = ''; $('#nPhoto').value = ''; $('#nPhotoPreview').hidden = true;
+});
 $('#formNew').addEventListener('submit', async (e) => {
   e.preventDefault();
   const body = Object.fromEntries(new FormData(e.target));
+  if (nPhotoData) body.photo = nPhotoData;
   try {
     const t = await api('/api/tickets', { method: 'POST', body: JSON.stringify(body) });
+    nPhotoData = ''; $('#nPhotoPreview').hidden = true;
     e.target.reset(); $('#eqInfo').hidden = true; modalNew.classList.remove('open');
     toast(`✅ ส่งใบแจ้งซ่อมแล้ว: ${t.no} (แจ้งเตือนอีเมล/LINE อัตโนมัติ)`);
     loadDashboard();
@@ -752,6 +783,7 @@ async function openDetail(id) {
       ${row('ความเร่งด่วน', t.priority)}
       ${row('อาการ', t.detail)}
       ${row('ผู้แจ้ง', `${t.reporter} ${t.phone ? '· ' + t.phone : ''} ${t.email ? '· ' + t.email : ''}`)}
+      ${t.photo ? `<div class="d-row"><span class="k">รูปภาพ</span><a href="${t.photo}" target="_blank"><img src="${t.photo}" class="ticket-photo" alt="รูปแจ้งซ่อม" /></a></div>` : ''}
     </div>
     ${editBlock}
     ${adminBlock}

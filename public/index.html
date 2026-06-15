@@ -243,6 +243,13 @@
         <label>อาการ / รายละเอียดปัญหา *
           <textarea name="detail" rows="4" required placeholder="อธิบายอาการที่พบ..."></textarea>
         </label>
+        <label>รูปภาพ (ถ้ามี)
+          <input type="file" id="nPhoto" accept="image/*" />
+          <div id="nPhotoPreview" class="photo-preview" hidden>
+            <img id="nPhotoImg" alt="ตัวอย่างรูป" />
+            <button type="button" class="btn-ghost" id="nPhotoClear">ลบรูป</button>
+          </div>
+        </label>
         <div class="modal-foot">
           <button type="button" class="btn-ghost" data-close>ยกเลิก</button>
           <button type="submit" class="btn-primary">ส่งใบแจ้งซ่อม</button>

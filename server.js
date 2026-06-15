@@ -30,7 +30,7 @@ const {
 } = await import('./lib/auth.js');
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '8mb' })); // รองรับรูปภาพ base64
 // ไม่ cache ไฟล์หน้าเว็บ เพื่อให้เห็นการอัปเดตทันทีทุกครั้งที่รีเฟรช
 app.use(express.static(path.join(__dirname, 'public'), {
   etag: false,
