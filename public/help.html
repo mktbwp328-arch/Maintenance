@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>คู่มือการใช้งาน — ระบบแจ้งซ่อม MTD</title>
+<style>
+  :root { --bg:#14161c; --card:#1c1f28; --line:#2a2e3a; --ink:#e7eaf0; --muted:#9aa0ad; --brand:#8b5cf6; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:"Segoe UI",Tahoma,sans-serif; line-height:1.7; }
+  .wrap { max-width:860px; margin:0 auto; padding:28px 20px 80px; }
+  .top { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:8px; }
+  h1 { font-size:26px; margin:0; }
+  h2 { font-size:20px; margin:34px 0 12px; padding-bottom:8px; border-bottom:2px solid var(--brand); }
+  h3 { font-size:16px; margin:20px 0 8px; color:#c9b8ff; }
+  .sub { color:var(--muted); margin:4px 0 0; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin:14px 0; }
+  table { width:100%; border-collapse:collapse; margin:10px 0; font-size:14px; }
+  th,td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  th { background:#232732; }
+  .center { text-align:center; }
+  .pill { display:inline-block; padding:2px 10px; border-radius:999px; font-size:13px; font-weight:600; color:#fff; }
+  ol,ul { padding-left:22px; }
+  li { margin:5px 0; }
+  code { background:#232732; padding:2px 7px; border-radius:6px; font-size:14px; }
+  a.btn { background:var(--brand); color:#fff; text-decoration:none; padding:9px 16px; border-radius:10px; font-weight:600; white-space:nowrap; }
+  .note { background:rgba(139,92,246,.12); border-left:3px solid var(--brand); padding:10px 14px; border-radius:8px; margin:10px 0; }
+  .warn { background:rgba(245,158,11,.12); border-left:3px solid #f59e0b; padding:10px 14px; border-radius:8px; margin:10px 0; }
+  @media print {
+    body { background:#fff; color:#000; }
+    .card { background:#fff; border-color:#ccc; }
+    th { background:#eee; }
+    .no-print { display:none !important; }
+    h2 { border-color:#000; } h3 { color:#333; }
+    .note,.warn { background:#f4f4f4; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>📘 คู่มือการใช้งานระบบแจ้งซ่อม MTD</h1>
+      <p class="sub">สำหรับผู้ใช้งาน — แจ้งซ่อมผ่านเว็บ และผ่าน LINE</p>
+    </div>
+    <button class="btn no-print" onclick="window.print()" style="border:0;cursor:pointer;font:inherit;font-weight:600">🖨️ พิมพ์ / บันทึกเป็น PDF</button>
+  </div>
+
+  <div class="card">
+    แจ้งซ่อมได้ <b>2 ช่องทาง</b>: 🖥️ ผ่านเว็บไซต์ และ 📱 ผ่าน LINE — เมื่อแจ้งแล้วระบบจะแจ้งเตือนสถานะกลับให้ทราบ<b>อัตโนมัติจนงานเสร็จ</b>
+  </div>
+
+  <h2>🖥️ ช่องทางที่ 1: แจ้งซ่อมผ่านเว็บไซต์</h2>
+
+  <h3>ขั้นที่ 1 — เข้าสู่ระบบ</h3>
+  <ol>
+    <li>เปิดเว็บ: <code>https://maintenance-gamma-tan.vercel.app</code></li>
+    <li>กรอก <b>ชื่อผู้ใช้</b> และ <b>รหัสผ่าน</b> ที่ได้รับจากแอดมิน</li>
+    <li>กด <b>เข้าสู่ระบบ</b></li>
+  </ol>
+
+  <h3>ขั้นที่ 2 — เปิดฟอร์ม</h3>
+  <p>กดปุ่ม <b>➕ แจ้งซ่อม</b> (มุมขวาบน)</p>
+
+  <h3>ขั้นที่ 3 — กรอกข้อมูล</h3>
+  <table>
+    <tr><th>ช่อง</th><th>คำอธิบาย</th><th class="center">จำเป็น</th></tr>
+    <tr><td>ชื่อผู้แจ้ง</td><td>ชื่อของคุณ</td><td class="center">✅</td></tr>
+    <tr><td>เบอร์โทร</td><td>เบอร์ติดต่อกลับ</td><td class="center">–</td></tr>
+    <tr><td>อีเมล</td><td>สำหรับรับแจ้งเตือนทางเมล</td><td class="center">–</td></tr>
+    <tr><td>ความเร่งด่วน</td><td>ปกติ / เร่งด่วน / วิกฤต (หยุดการผลิต)</td><td class="center">✅</td></tr>
+    <tr><td>เครื่องจักร / อาคาร</td><td>เลือกสิ่งที่ต้องการแจ้งซ่อม</td><td class="center">✅</td></tr>
+    <tr><td>หมวดปัญหา</td><td>เช่น ไฟฟ้า / เครื่องกล / ระบบลม</td><td class="center">–</td></tr>
+    <tr><td>อาการ / รายละเอียด</td><td>อธิบายอาการที่พบ</td><td class="center">✅</td></tr>
+    <tr><td>รูปภาพ</td><td>แนบรูปจุดที่เสีย</td><td class="center">–</td></tr>
+  </table>
+
+  <h3>ขั้นที่ 4 — ส่ง และติดตาม</h3>
+  <ul>
+    <li>กด <b>ส่งใบแจ้งซ่อม</b> → ระบบแสดงเลขที่ใบ เช่น <code>MTD-26060022</code></li>
+    <li>หน้าแรกแสดง <b>รายการที่คุณแจ้ง</b> พร้อมสถานะ — กดที่ใบเพื่อดูรายละเอียด/ประวัติ</li>
+  </ul>
+
+  <h2>📱 ช่องทางที่ 2: แจ้งซ่อมผ่าน LINE</h2>
+
+  <div class="warn">
+    <b>⚠️ ทำครั้งแรกครั้งเดียว — เพิ่มเพื่อนบอท</b><br>
+    เปิด LINE → ค้นหา <code>@743cmohm</code> → กด <b>เพิ่มเพื่อน</b> บัญชี <b>BWP แจ้งซ่อม</b><br>
+    <span style="color:#f59e0b">ถ้าไม่เพิ่มเพื่อน บอทจะส่งแจ้งเตือนกลับหาคุณไม่ได้ (กฎของ LINE)</span>
+  </div>
+
+  <h3>ขั้นที่ 1 — เปิดฟอร์ม</h3>
+  <p>เปิดลิงก์ <code>https://liff.line.me/2010375570-jvQMAOCL</code> หรือกดเมนู/ลิงก์ที่แชร์ในกลุ่ม</p>
+
+  <h3>ขั้นที่ 2 — กรอกและส่ง</h3>
+  <ul>
+    <li>ฟอร์มดึง <b>ชื่อ LINE</b> ของคุณมาให้อัตโนมัติ</li>
+    <li>เลือก <b>เครื่องจักร/อาคาร</b>, <b>ความเร่งด่วน</b>, กรอก <b>อาการ</b></li>
+    <li>แนบรูป — เลือกรูป หรือ <b>ถ่ายรูปสด</b> จากกล้องได้เลย</li>
+    <li>กด <b>ส่งแจ้งซ่อม</b> → บอทส่งการ์ดยืนยัน ✅ <i>รับแจ้งซ่อมของคุณแล้ว</i></li>
+  </ul>
+
+  <h2>🔔 การแจ้งเตือนสถานะ</h2>
+  <p>ทุกครั้งที่สถานะเปลี่ยน คุณจะได้ <b>การ์ดแจ้งเตือนทาง LINE</b> โดยสีแถบบอกสถานะ:</p>
+  <table>
+    <tr><th>สี</th><th>สถานะ</th><th>ความหมาย</th></tr>
+    <tr><td><span class="pill" style="background:#f59e0b">เหลือง</span></td><td>แจ้งซ่อม</td><td>รับเรื่องแล้ว รอดำเนินการ</td></tr>
+    <tr><td><span class="pill" style="background:#3b82f6">ฟ้า</span></td><td>ดำเนินการ</td><td>ช่างกำลังซ่อม</td></tr>
+    <tr><td><span class="pill" style="background:#8b5cf6">ม่วง</span></td><td>ส่งซ่อม / รออะไหล่</td><td>รออะไหล่หรือส่งซ่อมภายนอก</td></tr>
+    <tr><td><span class="pill" style="background:#22c55e">เขียว</span></td><td>สำเร็จ</td><td>ซ่อมเสร็จแล้ว</td></tr>
+    <tr><td><span class="pill" style="background:#ef4444">แดง</span></td><td>ยกเลิก</td><td>ยกเลิกใบแจ้งซ่อม</td></tr>
+  </table>
+  <div class="note">เมื่อ <b>ซ่อมสำเร็จ</b> การ์ดจะแสดงเพิ่ม: 🛠️ <b>ผู้ซ่อม</b> · 🔧 <b>รายละเอียดการซ่อม</b> · 📅 <b>วันที่สำเร็จ</b></div>
+
+  <h2>❓ ปัญหาที่พบบ่อย</h2>
+  <table>
+    <tr><th>ปัญหา</th><th>วิธีแก้</th></tr>
+    <tr><td>บอทไม่แจ้งเตือนกลับใน LINE</td><td>ตรวจว่าได้ <b>เพิ่มเพื่อน</b> <code>@743cmohm</code> แล้ว</td></tr>
+    <tr><td>เปิดฟอร์ม LINE ไม่ได้</td><td>เปิดลิงก์ผ่านแอป LINE (ไม่ใช่เบราว์เซอร์ภายนอก)</td></tr>
+    <tr><td>ล็อกอินเว็บไม่ได้</td><td>ตรวจชื่อผู้ใช้/รหัสผ่าน หรือติดต่อแอดมิน</td></tr>
+    <tr><td>ไม่เห็นเครื่องจักรที่ต้องการ</td><td>แจ้งแอดมินให้เพิ่มเครื่องจักรเข้าระบบ</td></tr>
+    <tr><td>แนบรูปไม่ได้</td><td>ใช้ไฟล์รูปภาพ (jpg/png) ขนาดไม่ใหญ่เกินไป</td></tr>
+  </table>
+
+  <p class="sub" style="margin-top:30px;text-align:center">ระบบแจ้งซ่อม MTD — ฝ่ายซ่อมบำรุง</p>
+</div>
+</body>
+</html>
