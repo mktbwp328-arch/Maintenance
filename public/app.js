@@ -556,7 +556,6 @@ async function openBuildingMachines(name) {
   $('#bBody').innerHTML = `
     <div style="text-align:right;margin-bottom:12px"><button class="btn-primary" id="bExportBtn">📄 Export PDF</button></div>
     <div class="eq-kpis">
-      ${kpi(d.machineCount, 'เครื่องจักร', '#a78bfa')}
       ${kpi(d.repairs, 'ครั้งที่ซ่อม', '#8b5cf6')}
       ${kpi(d.openRepairs, 'กำลังค้าง', '#fbbf24')}
       ${kpi(d.pmCount, 'ครั้งที่ PM', '#2dd4bf')}
@@ -601,7 +600,6 @@ function exportBuildingPDF(name, d) {
       <div class="org">พิมพ์เมื่อ ${new Date().toLocaleString('th-TH')}</div>
     </div>
     <div class="kpis">
-      <div class="kpi"><div class="n">${d.machineCount}</div><div class="l">เครื่องจักร</div></div>
       <div class="kpi"><div class="n">${d.repairs}</div><div class="l">ครั้งที่ซ่อม</div></div>
       <div class="kpi"><div class="n">${d.openRepairs}</div><div class="l">กำลังค้าง</div></div>
       <div class="kpi"><div class="n">${d.pmCount}</div><div class="l">ครั้งที่ PM</div></div>
