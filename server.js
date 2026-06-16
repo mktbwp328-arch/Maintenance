@@ -104,6 +104,16 @@ app.post('/api/line/ticket', wrap(async (req, res) => {
   res.status(201).json({ no: t.no, status: t.status, equipmentName: t.equipmentName });
 }));
 
+// รูปแนบใบแจ้งซ่อม (สาธารณะ) — คืน base64 ที่เก็บไว้เป็นไฟล์ภาพจริง เพื่อให้ LINE ดึงไปแสดงในการ์ดได้
+app.get('/api/tickets/:id/photo', wrap(async (req, res) => {
+  const t = await getTicket(req.params.id);
+  const m = /^data:(image\/[\w.+-]+);base64,(.+)$/s.exec(t?.photo || '');
+  if (!m) return res.status(404).send('no photo');
+  res.setHeader('Content-Type', m[1]);
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.send(Buffer.from(m[2], 'base64'));
+}));
+
 // Everything below requires login
 app.use('/api', authRequired);
 
