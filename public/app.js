@@ -554,6 +554,7 @@ async function openBuildingMachines(name) {
       <div><div class="det">${esc(p.equipmentName || p.equipmentId)} · ${esc(p.type)}</div><div class="meta">ผล: ${esc(p.result)} · โดย ${esc(p.performedBy || '-')}</div></div><span></span></div>`).join('')
     || '<p style="color:var(--muted)">ยังไม่มีประวัติ PM</p>';
   $('#bBody').innerHTML = `
+    <div style="text-align:right;margin-bottom:12px"><button class="btn-primary" id="bExportBtn">📄 Export PDF</button></div>
     <div class="eq-kpis">
       ${kpi(d.machineCount, 'เครื่องจักร', '#a78bfa')}
       ${kpi(d.repairs, 'ครั้งที่ซ่อม', '#8b5cf6')}
@@ -563,7 +564,58 @@ async function openBuildingMachines(name) {
     <div class="d-section"><h3 style="font-size:14px;margin-bottom:8px">🔧 ประวัติการแจ้งซ่อม (${d.tickets.length})</h3><div class="ticket-list">${tline}</div></div>
     <div class="d-section"><h3 style="font-size:14px;margin-bottom:8px">🛠️ ประวัติการบำรุงรักษา PM (${d.pm.length})</h3><div class="ticket-list">${pline}</div></div>`;
   $('#modalBuilding').classList.add('open');
+  $('#bExportBtn').addEventListener('click', () => exportBuildingPDF(name, d));
   $$('#bBody .ticket[data-tid]').forEach((el) => el.addEventListener('click', () => { $('#modalBuilding').classList.remove('open'); openDetail(el.dataset.tid); }));
+}
+
+// สร้างรายงานประวัติการซ่อมของอาคารเป็น PDF (ผ่านหน้าต่างพิมพ์ของเบราว์เซอร์)
+function exportBuildingPDF(name, d) {
+  const td = (v) => `<td>${esc(v ?? '-')}</td>`;
+  const ticketRows = d.tickets.map((t) => `<tr>
+      ${td(t.no)}${td(new Date(t.createdAt).toLocaleDateString('th-TH'))}${td(t.equipmentName || t.equipmentId)}${td(t.problemType)}
+      ${td(t.priority)}${td(t.detail)}${td(t.solution)}${td(t.assignee)}${td(t.status)}</tr>`).join('')
+    || '<tr><td colspan="9" style="text-align:center">ไม่มีประวัติ</td></tr>';
+  const pmRows = d.pm.map((p) => `<tr>${td(p.no)}${td(p.date)}${td(p.equipmentName || p.equipmentId)}${td(p.type)}${td(p.result)}${td(p.performedBy)}</tr>`).join('')
+    || '<tr><td colspan="6" style="text-align:center">ไม่มีประวัติ PM</td></tr>';
+  const html = `<!doctype html><html lang="th"><head><meta charset="utf-8">
+    <title>ประวัติการซ่อม ${esc(name)}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      *{font-family:'Sarabun',sans-serif}body{color:#1a1a1a;padding:28px;margin:0}
+      .hd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #6d28d9;padding-bottom:10px;margin-bottom:14px}
+      .hd h1{font-size:20px;margin:0;color:#6d28d9}.hd .sub{color:#666;font-size:12px}
+      .hd .org{text-align:right;font-size:12px;color:#444}
+      .kpis{display:flex;gap:10px;margin:10px 0 18px}
+      .kpi{flex:1;border:1px solid #ddd;border-top:3px solid #6d28d9;border-radius:8px;padding:8px;text-align:center}
+      .kpi .n{font-size:20px;font-weight:700;color:#6d28d9}.kpi .l{font-size:11px;color:#666}
+      h2{font-size:14px;margin:18px 0 6px;color:#333}
+      table{width:100%;border-collapse:collapse;font-size:11px}
+      th,td{border:1px solid #ccc;padding:5px 6px;text-align:left;vertical-align:top}
+      th{background:#f3effe;color:#4c1d95}
+      .foot{margin-top:24px;font-size:11px;color:#888;text-align:right}
+      @media print{body{padding:0}}
+    </style></head><body>
+    <div class="hd">
+      <div><h1>🏢 รายงานประวัติการซ่อม · ${esc(name)}</h1><div class="sub">ระบบแจ้งซ่อม MTD — Maintenance Request System</div></div>
+      <div class="org">พิมพ์เมื่อ ${new Date().toLocaleString('th-TH')}</div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="n">${d.machineCount}</div><div class="l">เครื่องจักร</div></div>
+      <div class="kpi"><div class="n">${d.repairs}</div><div class="l">ครั้งที่ซ่อม</div></div>
+      <div class="kpi"><div class="n">${d.openRepairs}</div><div class="l">กำลังค้าง</div></div>
+      <div class="kpi"><div class="n">${d.pmCount}</div><div class="l">ครั้งที่ PM</div></div>
+    </div>
+    <h2>🔧 ประวัติการแจ้งซ่อม (${d.tickets.length})</h2>
+    <table><thead><tr><th>เลขที่</th><th>วันที่</th><th>เครื่องจักร</th><th>หมวด</th><th>เร่งด่วน</th><th>อาการ</th><th>วิธีแก้ไข</th><th>ผู้ดำเนินการ</th><th>สถานะ</th></tr></thead><tbody>${ticketRows}</tbody></table>
+    <h2>🛠️ ประวัติการบำรุงรักษา PM (${d.pm.length})</h2>
+    <table><thead><tr><th>เลขที่</th><th>วันที่</th><th>เครื่องจักร</th><th>ประเภท</th><th>ผล</th><th>ผู้ดำเนินการ</th></tr></thead><tbody>${pmRows}</tbody></table>
+    <div class="foot">ออกโดยระบบแจ้งซ่อม MTD</div>
+    <script>window.onload=function(){setTimeout(function(){window.print()},500)}<\/script>
+    </body></html>`;
+  const w = window.open('', '_blank');
+  if (!w) return toast('⚠️ เบราว์เซอร์บล็อกป๊อปอัพ — อนุญาตป๊อปอัพแล้วลองใหม่');
+  w.document.write(html); w.document.close();
 }
 
 $('#btnNewBuilding').addEventListener('click', () => $('#modalNewBuilding').classList.add('open'));
