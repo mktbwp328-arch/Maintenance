@@ -47,6 +47,7 @@ function fillEquipSelect(sel) {
   META.equipment.forEach((e) => { (groups[e.type] ||= []).push(e); });
   opts += Object.entries(groups).map(([t, items]) =>
     `<optgroup label="${esc(t)}">${items.map((e) => `<option value="${e.id}">${e.id} — ${esc(e.name)}</option>`).join('')}</optgroup>`).join('');
+  opts += '<option value="OTHER">❓ อื่นๆ (ไม่มีในรายการ)</option>';
   sel.innerHTML = '<option value="">— เลือกเครื่องจักร / อาคาร —</option>' + opts;
 }
 
@@ -733,6 +734,11 @@ $('#selEquipment').addEventListener('change', (e) => {
   if (val.startsWith(BLD_PREFIX)) {
     box.hidden = false;
     box.innerHTML = `ประเภท: <b>อาคาร / สถานที่</b> · 🏢 <b>${esc(val.slice(BLD_PREFIX.length))}</b> · แจ้งซ่อมงานอาคาร (ไฟฟ้า/ประปา/โครงสร้าง ฯลฯ)`;
+    return;
+  }
+  if (val === 'OTHER') {
+    box.hidden = false;
+    box.innerHTML = 'ประเภท: <b>อื่นๆ</b> · โปรดระบุเครื่องจักร/อาคาร และอาการให้ชัดเจนในช่อง "อาการ / รายละเอียดปัญหา"';
     return;
   }
   const eq = META.equipment.find((x) => x.id === val);

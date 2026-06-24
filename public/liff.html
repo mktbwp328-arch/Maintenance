@@ -114,6 +114,7 @@
       let opts = buildings.length ? `<optgroup label="🏢 อาคาร / สถานที่">${buildings.map((b)=>`<option value="BLD::${esc(b)}">🏢 ${esc(b)}</option>`).join('')}</optgroup>` : '';
       const groups = {}; META.equipment.forEach((e)=>{(groups[e.type] ||= []).push(e);});
       opts += Object.entries(groups).map(([t,items])=>`<optgroup label="${esc(t)}">${items.map((e)=>`<option value="${esc(e.id)}">${esc(e.id)} — ${esc(e.name)}</option>`).join('')}</optgroup>`).join('');
+      opts += '<option value="OTHER">❓ อื่นๆ (ไม่มีในรายการ)</option>';
       $('#equipmentId').insertAdjacentHTML('beforeend', opts);
       $('#loading').classList.add('hidden'); $('#form').classList.remove('hidden');
     }
@@ -121,6 +122,7 @@
     $('#equipmentId').addEventListener('change', (e)=>{
       const v = e.target.value, box = $('#eqinfo');
       if (v.startsWith('BLD::')) { box.classList.remove('hidden'); box.innerHTML = `🏢 <b>${esc(v.slice(5))}</b> · แจ้งซ่อมงานอาคาร`; return; }
+      if (v === 'OTHER') { box.classList.remove('hidden'); box.innerHTML = 'ประเภท: <b>อื่นๆ</b> · โปรดระบุให้ชัดเจนในช่องอาการ'; return; }
       const eq = META.equipment.find((x)=>x.id===v);
       if (eq) { box.classList.remove('hidden'); box.innerHTML = `ประเภท: <b>${esc(eq.type)}</b> · แผนก: ${esc(eq.dept)} · 📍 ${esc(eq.location)}`; }
       else box.classList.add('hidden');
