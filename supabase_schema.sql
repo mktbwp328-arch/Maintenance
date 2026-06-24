@@ -31,6 +31,7 @@ create table if not exists public.tickets (
   phone          text,
   email          text,
   dept           text,
+  req_dept       text,
   equipment_id   text,
   equipment_name text,
   location       text,
@@ -46,6 +47,7 @@ create table if not exists public.tickets (
   closed_at      timestamptz,
   created_by     text
 );
+alter table public.tickets add column if not exists req_dept text;
 create index if not exists tickets_status_idx on public.tickets(status);
 create index if not exists tickets_created_idx on public.tickets(created_at desc);
 

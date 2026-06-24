@@ -38,6 +38,26 @@
   <form id="form" class="hidden">
     <div class="head"><span class="logo">🔧</span><div><h1>แจ้งซ่อม MTD</h1><p class="sub">ผ่าน LINE</p></div></div>
     <div class="who" id="who"></div>
+    <label>แผนก *
+      <select id="reqDept" required>
+        <option value="">— เลือกแผนก —</option>
+        <option value="Printing">Printing</option>
+        <option value="ฝ่ายผลิต เป่า">ฝ่ายผลิต เป่า</option>
+        <option value="ฝ่ายผลิต กรอ">ฝ่ายผลิต กรอ</option>
+        <option value="ทรัพยากรบุคคล">ทรัพยากรบุคคล</option>
+        <option value="QC">QC</option>
+        <option value="R&D">R&D</option>
+        <option value="Safety">Safety</option>
+        <option value="การตลาด">การตลาด</option>
+        <option value="ขนส่ง">ขนส่ง</option>
+        <option value="ขาย">ขาย</option>
+        <option value="คลังสินค้า">คลังสินค้า</option>
+        <option value="จัดซื้อ">จัดซื้อ</option>
+        <option value="ซ่อมบำรุง">ซ่อมบำรุง</option>
+        <option value="บัญชี">บัญชี</option>
+        <option value="วางแผน">วางแผน</option>
+      </select>
+    </label>
     <label>เครื่องจักร / อาคาร *
       <select id="equipmentId" required><option value="">— เลือก —</option></select>
     </label>
@@ -133,7 +153,7 @@
       const btn = $('#submitBtn'); btn.disabled = true; btn.textContent = 'กำลังส่ง...';
       try {
         const res = await fetch('/api/line/ticket', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({
-          idToken: IDTOKEN, reporter: window.__reporter,
+          idToken: IDTOKEN, reporter: window.__reporter, reqDept: $('#reqDept').value,
           equipmentId: $('#equipmentId').value, problemType: $('#problemType').value,
           priority: $('#priority').value, detail: $('#detail').value, photo: photoData,
         })});

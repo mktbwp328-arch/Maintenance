@@ -6,6 +6,8 @@ const STATUS_COLORS = {
   'ยกเลิก': '#f87171',
 };
 const PRI_COLORS = { 'ปกติ': '#34d399', 'เร่งด่วน': '#fbbf24', 'วิกฤต (หยุดการผลิต)': '#f87171' };
+// แผนกผู้แจ้ง (ต้องตรงกับ dropdown ในฟอร์มแจ้งซ่อม index.html)
+const REQ_DEPTS = ['Printing', 'ฝ่ายผลิต เป่า', 'ฝ่ายผลิต กรอ', 'ทรัพยากรบุคคล', 'QC', 'R&D', 'Safety', 'การตลาด', 'ขนส่ง', 'ขาย', 'คลังสินค้า', 'จัดซื้อ', 'ซ่อมบำรุง', 'บัญชี', 'วางแผน'];
 
 // อนุญาตเปลี่ยนสถานะแบบเดินหน้าเท่านั้น (forward-only workflow)
 const TRANSITIONS = {
@@ -813,6 +815,8 @@ async function openDetail(id) {
         <label style="font-size:13px;font-weight:600">ผู้แจ้ง<input id="eReporter" value="${esc(t.reporter)}" style="${inp}"></label>
         <label style="font-size:13px;font-weight:600">เบอร์โทร<input id="ePhone" value="${esc(t.phone)}" style="${inp}"></label>
       </div>
+      <label style="font-size:13px;font-weight:600;display:block;margin-top:10px">แผนกผู้แจ้ง
+        <select id="eReqDept" style="${inp}"><option value="">— เลือกแผนก —</option>${REQ_DEPTS.map((d) => `<option${d === t.reqDept ? ' selected' : ''}>${esc(d)}</option>`).join('')}</select></label>
       <label style="font-size:13px;font-weight:600;display:block;margin-top:10px">เครื่องจักร / อาคาร
         <select id="eEquip" style="${inp}"></select></label>
       <div class="grid2" style="margin-top:10px">
@@ -827,6 +831,7 @@ async function openDetail(id) {
     </div>` : '';
   $('#dBody').innerHTML = `
     <div class="d-section">
+      ${row('แผนกผู้แจ้ง', t.reqDept)}
       ${row('เครื่องจักร', `${t.equipmentId} ${t.equipmentName}`)}
       ${row('แผนก / สถานที่', `${t.dept} · ${t.location}`)}
       ${row('หมวดปัญหา', t.problemType)}
@@ -868,7 +873,7 @@ async function openDetail(id) {
     $('#eSave').addEventListener('click', async () => {
       try {
         await api('/api/tickets/' + t.id, { method: 'PATCH', body: JSON.stringify({
-          reporter: $('#eReporter').value, phone: $('#ePhone').value, equipmentId: $('#eEquip').value,
+          reporter: $('#eReporter').value, phone: $('#ePhone').value, reqDept: $('#eReqDept').value, equipmentId: $('#eEquip').value,
           problemType: $('#eProblem').value, priority: $('#ePriority').value, detail: $('#eDetail').value,
         }) });
         $('#modalDetail').classList.remove('open');
