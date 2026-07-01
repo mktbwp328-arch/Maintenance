@@ -123,14 +123,27 @@ const ownScope = (req) => (req.user.role === 'reporter' ? req.user.username : un
 // ตั้งค่า LINE token / group id ลง DB (แอดมินเท่านั้น) — ใช้ตั้งค่าบนเว็บ prod โดยไม่ต้องแก้ env
 app.get('/api/line/settings', roleRequired('admin'), wrap(async (req, res) => {
   const tok = await getSetting('line_token');
-  res.json({ hasToken: Boolean(tok), tokenLen: tok ? tok.length : 0, groupId: (await getSetting('line_group_id')) || null });
+  res.json({
+    hasToken: Boolean(tok), tokenLen: tok ? tok.length : 0,
+    groupId: (await getSetting('line_group_id')) || null,
+    hasChannelId: Boolean((await getSetting('line_channel_id')) || process.env.LINE_CHANNEL_ID),
+    hasChannelSecret: Boolean((await getSetting('line_channel_secret')) || process.env.LINE_CHANNEL_SECRET),
+    tokenExp: (await getSetting('line_token_exp')) || null,
+  });
 }));
 app.post('/api/line/settings', roleRequired('admin'), wrap(async (req, res) => {
-  const { token, groupId } = req.body;
+  const { token, groupId, channelId, channelSecret } = req.body;
   if (token) await setSetting('line_token', String(token).trim());
   if (groupId) await setSetting('line_group_id', String(groupId).trim());
+  if (channelId) await setSetting('line_channel_id', String(channelId).trim());
+  if (channelSecret) await setSetting('line_channel_secret', String(channelSecret).trim());
   const tok = await getSetting('line_token');
-  res.json({ ok: true, hasToken: Boolean(tok), tokenLen: tok ? tok.length : 0, groupId: (await getSetting('line_group_id')) || null });
+  res.json({
+    ok: true, hasToken: Boolean(tok), tokenLen: tok ? tok.length : 0,
+    groupId: (await getSetting('line_group_id')) || null,
+    hasChannelId: Boolean((await getSetting('line_channel_id')) || process.env.LINE_CHANNEL_ID),
+    hasChannelSecret: Boolean((await getSetting('line_channel_secret')) || process.env.LINE_CHANNEL_SECRET),
+  });
 }));
 
 app.get('/api/stats', wrap(async (req, res) => {
