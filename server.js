@@ -120,6 +120,19 @@ app.use('/api', authRequired);
 // reporters only ever see their own data
 const ownScope = (req) => (req.user.role === 'reporter' ? req.user.username : undefined);
 
+// ตั้งค่า LINE token / group id ลง DB (แอดมินเท่านั้น) — ใช้ตั้งค่าบนเว็บ prod โดยไม่ต้องแก้ env
+app.get('/api/line/settings', roleRequired('admin'), wrap(async (req, res) => {
+  const tok = await getSetting('line_token');
+  res.json({ hasToken: Boolean(tok), tokenLen: tok ? tok.length : 0, groupId: (await getSetting('line_group_id')) || null });
+}));
+app.post('/api/line/settings', roleRequired('admin'), wrap(async (req, res) => {
+  const { token, groupId } = req.body;
+  if (token) await setSetting('line_token', String(token).trim());
+  if (groupId) await setSetting('line_group_id', String(groupId).trim());
+  const tok = await getSetting('line_token');
+  res.json({ ok: true, hasToken: Boolean(tok), tokenLen: tok ? tok.length : 0, groupId: (await getSetting('line_group_id')) || null });
+}));
+
 app.get('/api/stats', wrap(async (req, res) => {
   const s = await stats({ from: req.query.from, to: req.query.to, createdBy: ownScope(req) });
   res.json({ ...s, pmDue: req.user.role === 'reporter' ? [] : await pmDue(30) });
