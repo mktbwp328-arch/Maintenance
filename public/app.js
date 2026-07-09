@@ -809,7 +809,10 @@ async function openDetail(id) {
                ${(TRANSITIONS[t.status] || []).map((s) => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}
              </select>
              <button class="btn-primary" id="dStatusApply" style="white-space:nowrap">อัปเดตสถานะ</button>
-           </div>`
+           </div>
+           <label id="dClosedDateWrap" style="display:none;font-size:13px;font-weight:600;margin-top:10px">📅 วันที่ปิดงาน (สำเร็จ / ยกเลิก)
+             <input type="date" id="dClosedDate" style="width:100%;margin-top:5px;padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--card2);color:var(--ink)" />
+           </label>`
         : `<p style="color:var(--muted);font-size:13px;margin:0">✔️ งานนี้ปิดแล้ว (${esc(t.status)}) — ไม่สามารถเปลี่ยนสถานะต่อได้</p>`}
     </div>` : `<div class="d-section"><div class="d-row"><span class="k">ผู้ดำเนินการ</span><span>${esc(t.assignee || '-')}</span></div>
       <div class="d-row"><span class="k">การแก้ไข</span><span>${esc(t.solution || '-')}</span></div></div>`;
@@ -860,12 +863,23 @@ async function openDetail(id) {
       await api('/api/tickets/' + t.id, { method: 'PATCH', body: JSON.stringify({ assignee: $('#dAssignee').value, solution: $('#dSolution').value }) });
       toast('💾 บันทึกแล้ว');
     });
+    // แสดงช่องวันที่เฉพาะเมื่อเลือกสถานะปิดงาน (สำเร็จ / ยกเลิก) — ตั้งค่าเริ่มต้นเป็นวันนี้
+    const statusSel = $('#dStatusSelect');
+    if (statusSel) statusSel.addEventListener('change', () => {
+      const wrap = $('#dClosedDateWrap'); if (!wrap) return;
+      const closing = statusSel.value === 'สำเร็จ' || statusSel.value === 'ยกเลิก';
+      wrap.style.display = closing ? 'block' : 'none';
+      if (closing && !$('#dClosedDate').value) $('#dClosedDate').value = new Date().toISOString().slice(0, 10);
+    });
     const applyBtn = $('#dStatusApply');
     if (applyBtn) applyBtn.addEventListener('click', async () => {
       const ns = $('#dStatusSelect').value;
       if (!ns) return toast('⚠️ กรุณาเลือกสถานะใหม่');
+      const body = { status: ns, assignee: $('#dAssignee').value, solution: $('#dSolution').value };
+      const cd = $('#dClosedDate');
+      if ((ns === 'สำเร็จ' || ns === 'ยกเลิก') && cd && cd.value) body.closedDate = cd.value;
       try {
-        await api('/api/tickets/' + t.id, { method: 'PATCH', body: JSON.stringify({ status: ns, assignee: $('#dAssignee').value, solution: $('#dSolution').value }) });
+        await api('/api/tickets/' + t.id, { method: 'PATCH', body: JSON.stringify(body) });
         $('#modalDetail').classList.remove('open');
         toast(`📌 อัปเดตสถานะเป็น "${ns}" และแจ้งเตือนแล้ว`);
         loadDashboard(); if ($('#view-list').classList.contains('active')) loadTickets();
