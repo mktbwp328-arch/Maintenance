@@ -22,7 +22,7 @@ const {
   listKB, createKB, deleteKB, seedKB,
   getSetting, setSetting,
 } = await import('./lib/store.js');
-const { notifyNew, notifyStatus, channelStatus, replyLine } = await import('./lib/notify.js');
+const { notifyNew, notifyStatus, notifyConfirmed, channelStatus, replyLine } = await import('./lib/notify.js');
 const { verifyLineIdToken, liffConfigured, liffId } = await import('./lib/line.js');
 const {
   ROLES, login, logout, listUsers, createUser, deleteUser, resetPassword,
@@ -71,6 +71,30 @@ const REGISTER_CMD = 'ลงทะเบียนกลุ่ม';
 app.post('/api/line/webhook', async (req, res) => {
   try {
     for (const ev of (req.body?.events || [])) {
+      // ผู้แจ้งกดปุ่ม "ยืนยันปิดงาน" บนการ์ด (postback)
+      if (ev.type === 'postback') {
+        const params = new URLSearchParams(ev.postback?.data || '');
+        if (params.get('action') === 'confirm') {
+          const uid = ev.source?.userId;
+          const t = await getTicket(params.get('id'));
+          if (!t) { if (ev.replyToken) await replyLine(ev.replyToken, '⚠️ ไม่พบใบแจ้งซ่อมนี้'); continue; }
+          // เฉพาะผู้แจ้งคนเดิม (เทียบ LINE userId) เท่านั้น
+          if (!uid || t.createdBy !== 'line:' + uid) {
+            if (ev.replyToken) await replyLine(ev.replyToken, '⚠️ เฉพาะผู้แจ้งเท่านั้นที่ยืนยันปิดงานได้');
+            continue;
+          }
+          if (t.status === 'ปิดงาน') { if (ev.replyToken) await replyLine(ev.replyToken, `ℹ️ ใบ ${t.no} ถูกปิดงานไปแล้ว`); continue; }
+          if (t.status !== 'สำเร็จ') { if (ev.replyToken) await replyLine(ev.replyToken, `⚠️ ใบ ${t.no} ยังไม่อยู่ในสถานะ "สำเร็จ" (ตอนนี้: ${t.status})`); continue; }
+          try {
+            const r = await updateTicket(t.id, { status: 'ปิดงาน', note: 'ผู้แจ้งยืนยันปิดงานผ่าน LINE' });
+            if (ev.replyToken) await replyLine(ev.replyToken, `✅ ขอบคุณครับ ยืนยันปิดงาน ${t.no} เรียบร้อยแล้ว`);
+            await notifyConfirmed(r.ticket).catch((e) => console.error('notifyConfirmed error', e));
+          } catch (e) {
+            if (ev.replyToken) await replyLine(ev.replyToken, '⚠️ ปิดงานไม่สำเร็จ: ' + e.message);
+          }
+        }
+        continue;
+      }
       // สนใจเฉพาะข้อความตัวอักษรเท่านั้น — เหตุการณ์อื่น (เข้า/ออกกลุ่ม, สติกเกอร์ ฯลฯ) ข้ามไป
       if (ev.type !== 'message' || ev.message?.type !== 'text') continue;
       const text = (ev.message.text || '').trim();
