@@ -148,6 +148,12 @@ async function init() {
   $('#btnNewPm').style.display = canEdit() ? '' : 'none';
   loadDashboard();
   renderEquipment();
+  // เปิดใบแจ้งซ่อมอัตโนมัติเมื่อมากับลิงก์ ?ticket=<เลขที่> (จากปุ่มในการ์ด LINE)
+  const tno = new URLSearchParams(location.search).get('ticket');
+  if (tno) {
+    openDetail(tno).catch((e) => toast('⚠️ เปิดใบไม่สำเร็จ: ' + e.message));
+    history.replaceState({}, '', location.pathname);
+  }
 }
 
 // ---------- dashboard date filter ----------
