@@ -199,7 +199,9 @@ async function loadDashboard() {
   const s = await api('/api/stats?' + params);
   $('#dfLabel').textContent = rangeLabel();
   const order = META.statuses;
-  $('#statGrid').innerHTML = order.map((st) =>
+  // ซ่อนการ์ด KPI "ปิดงาน" บนแดชบอร์ด (แต่ยังนับรวมใน "ทั้งหมด" และกราฟตามปกติ)
+  const kpiOrder = order.filter((st) => st !== 'ปิดงาน');
+  $('#statGrid').innerHTML = kpiOrder.map((st) =>
     `<div class="stat" style="--c:${STATUS_COLORS[st]}" data-st="${esc(st)}">
        <div class="num">${s.counts[st] || 0}</div><div class="lbl">${st}</div></div>`
   ).join('') + `<div class="stat" style="--c:#475569"><div class="num">${s.total}</div><div class="lbl">ทั้งหมด</div></div>`;
