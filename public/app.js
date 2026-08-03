@@ -784,8 +784,14 @@ $('#nPhoto').addEventListener('change', async (e) => {
 $('#nPhotoClear').addEventListener('click', () => {
   nPhotoData = ''; $('#nPhoto').value = ''; $('#nPhotoPreview').hidden = true;
 });
+let submittingNew = false;
 $('#formNew').addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (submittingNew) return; // กันกดซ้ำ (double-submit)
+  submittingNew = true;
+  const btn = e.submitter || $('#formNew button[type="submit"]');
+  const btnText = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'กำลังส่ง...'; }
   const body = Object.fromEntries(new FormData(e.target));
   if (nPhotoData) body.photo = nPhotoData;
   try {
@@ -795,6 +801,7 @@ $('#formNew').addEventListener('submit', async (e) => {
     toast(`✅ ส่งใบแจ้งซ่อมแล้ว: ${t.no} (แจ้งเตือนอีเมล/LINE อัตโนมัติ)`);
     loadDashboard();
   } catch (err) { toast('⚠️ ' + err.message); }
+  finally { submittingNew = false; if (btn) { btn.disabled = false; btn.textContent = btnText; } }
 });
 
 // ---------- ticket detail ----------
