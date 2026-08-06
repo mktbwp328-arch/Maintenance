@@ -53,7 +53,7 @@
   {"id":"RW-PRO-04","sn":"-","name":"เครื่องกรอม้วน 04 (Rewinding 04)","type":"Rewinding","dept":"Blowing Production","location":"รง.ฝ่ายผลิตเป่า","building":"อาคาร 1"},
   {"id":"RW-PRO-05","sn":"-","name":"เครื่องกรอฟิล์มยืด 05 (Rewinding 05 PP)","type":"Rewinding","dept":"Printing Production","location":"รง.ฝ่ายผลิตพิมพ์","building":"อาคาร 2"},
   {"id":"RW-PRO-06","sn":"-","name":"เครื่องกรอฟิล์มยืด 06 (Rewinding 06 PP)","type":"Rewinding","dept":"Printing Production","location":"รง.ฝ่ายผลิตพิมพ์","building":"อาคาร 2"},
-  {"id":"SF-PRO-01","sn":"-","name":"เครื่องนำฟิล์มยืด 01 (Stretch Film)","type":"Stretch Film","dept":"Printing Production","location":"รง.ฝ่ายผลิตพิมพ์","building":"อาคาร 2"},
+  {"id":"SF-PRO-01","sn":"-","name":"เครื่องเป่าฟิล์มยืด 01 (Stretch Film)","type":"Stretch Film","dept":"Printing Production","location":"รง.ฝ่ายผลิตพิมพ์","building":"อาคาร 2"},
   {"id":"SL-PRO-01","sn":"-","name":"เครื่องกรอม้วน 01 (Slitter 01)","type":"Slitter","dept":"Printing Production","location":"รง.ฝ่ายผลิตพิมพ์","building":"อาคาร 2"},
   {"id":"SL-PRO-02","sn":"-","name":"เครื่องกรอม้วน 02 (Slitter 02)","type":"Slitter","dept":"Printing Production","location":"รง.ฝ่ายผลิตพิมพ์","building":"อาคาร 2"},
   {"id":"SL-PRO-03","sn":"-","name":"เครื่องกรอม้วน 03 (Slitter 03)","type":"Slitter","dept":"Printing Production","location":"รง.ฝ่ายผลิตพิมพ์","building":"อาคาร 2"},
