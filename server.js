@@ -22,7 +22,7 @@ const {
   listKB, createKB, deleteKB, seedKB,
   getSetting, setSetting,
 } = await import('./lib/store.js');
-const { notifyNew, notifyStatus, notifyConfirmed, channelStatus, replyLine } = await import('./lib/notify.js');
+const { notifyNew, notifyStatus, channelStatus, replyLine } = await import('./lib/notify.js');
 const { verifyLineIdToken, liffConfigured, liffId } = await import('./lib/line.js');
 const {
   ROLES, login, logout, listUsers, createUser, deleteUser, resetPassword,
@@ -86,9 +86,9 @@ app.post('/api/line/webhook', async (req, res) => {
           if (t.status === 'ปิดงาน') { if (ev.replyToken) await replyLine(ev.replyToken, `ℹ️ ใบ ${t.no} ถูกปิดงานไปแล้ว`); continue; }
           if (t.status !== 'สำเร็จ') { if (ev.replyToken) await replyLine(ev.replyToken, `⚠️ ใบ ${t.no} ยังไม่อยู่ในสถานะ "สำเร็จ" (ตอนนี้: ${t.status})`); continue; }
           try {
-            const r = await updateTicket(t.id, { status: 'ปิดงาน', note: 'ผู้แจ้งยืนยันปิดงานผ่าน LINE' });
+            await updateTicket(t.id, { status: 'ปิดงาน', note: 'ผู้แจ้งยืนยันปิดงานผ่าน LINE' });
+            // ประหยัดโควตา: ตอบผู้แจ้งด้วย reply (ฟรี) เท่านั้น ไม่ push เข้ากลุ่ม
             if (ev.replyToken) await replyLine(ev.replyToken, `✅ ขอบคุณครับ ยืนยันปิดงาน ${t.no} เรียบร้อยแล้ว`);
-            await notifyConfirmed(r.ticket).catch((e) => console.error('notifyConfirmed error', e));
           } catch (e) {
             if (ev.replyToken) await replyLine(ev.replyToken, '⚠️ ปิดงานไม่สำเร็จ: ' + e.message);
           }
