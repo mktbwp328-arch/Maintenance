@@ -147,6 +147,7 @@
     <section id="view-pm" class="view">
       <div class="toolbar">
         <input id="searchPm" placeholder="🔎 ค้นหา เลขที่ PM / เครื่องจักร / ผู้ดำเนินการ" />
+        <button class="btn-ghost" id="btnPmExportAll" style="white-space:nowrap">📄 Export PDF ทั้งหมด</button>
         <button class="btn-primary" id="btnNewPm" style="color:#fff;background:var(--brand)">+ บันทึก PM</button>
       </div>
       <div id="pmList" class="ticket-list"></div>
@@ -381,6 +382,7 @@
         <label>รายละเอียด / สิ่งที่ดำเนินการ<textarea name="detail" rows="3"></textarea></label>
         <div class="modal-foot">
           <button type="button" class="btn-ghost" data-close>ยกเลิก</button>
+          <button type="button" class="btn-ghost" id="pmExportOne" hidden>📄 Export PDF</button>
           <button type="submit" id="pmSubmit" class="btn-primary" style="color:#fff;background:var(--brand)">บันทึก</button>
         </div>
       </form>

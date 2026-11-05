@@ -962,16 +962,21 @@ function pmRow(p) {
       ${p.detail ? `<div class="meta">${esc(p.detail)}</div>` : ''}
       ${st ? `<span class="pri" style="color:${st.color}">⏰ PM ครั้งถัดไป: ${esc(p.nextDue)}${st.label ? ` (${st.label})` : ''}</span>` : ''}
     </div>
-    ${canEdit() ? `<button class="btn-ghost pm-del" data-id="${esc(p.id)}" style="font-size:13px">🗑️ ลบ</button>` : '<span></span>'}
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="btn-ghost pm-pdf" data-id="${esc(p.id)}" style="font-size:13px" title="Export PDF รายการนี้">📄 PDF</button>
+      ${canEdit() ? `<button class="btn-ghost pm-del" data-id="${esc(p.id)}" style="font-size:13px">🗑️ ลบ</button>` : ''}
+    </div>
   </div>`;
 }
-let pmCache = {};
+let pmCache = {}, pmRows = [];
 async function loadPM() {
   const q = $('#searchPm').value.trim();
   const rows = await api('/api/pm' + (q ? '?q=' + encodeURIComponent(q) : ''));
+  pmRows = rows;
   pmCache = Object.fromEntries(rows.map((p) => [p.id, p]));
   $('#pmList').innerHTML = rows.map(pmRow).join('') || '<p style="color:var(--muted)">ยังไม่มีประวัติ PM</p>';
   $$('#pmList .pm-item').forEach((el) => el.addEventListener('click', () => openPmForm(pmCache[el.dataset.id])));
+  $$('#pmList .pm-pdf').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); exportPmPDF(pmCache[b.dataset.id]); }));
   $$('#pmList .pm-del').forEach((b) => b.addEventListener('click', async (e) => {
     e.stopPropagation(); // ไม่ให้เปิดหน้าแก้ไขตอนกดลบ
     if (!confirm('ลบรายการ PM นี้?')) return;
@@ -992,8 +997,98 @@ function openPmForm(rec) {
   [...f.elements].forEach((el) => { if (el.name) el.disabled = readOnly; });
   $('#pmSubmit').hidden = readOnly;
   $('#pmSubmit').textContent = rec ? '💾 บันทึกการแก้ไข' : 'บันทึก';
+  $('#pmExportOne').hidden = !rec;
+  $('#pmExportOne').onclick = rec ? () => exportPmPDF(rec) : null;
   $('#modalPm').classList.add('open');
 }
+
+// ---------- PM export PDF (ผ่านหน้าต่างพิมพ์ของเบราว์เซอร์ — สไตล์เดียวกับรายงานประวัติเครื่องจักร) ----------
+function printDoc(title, heading, body, landscape) {
+  const html = `<!doctype html><html lang="th"><head><meta charset="utf-8">
+    <title>${esc(title)}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+      @page{size:A4 ${landscape ? 'landscape' : 'portrait'};margin:12mm}
+      *{font-family:'Sarabun',sans-serif}body{color:#1a1a1a;padding:28px;margin:0}
+      .hd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #6d28d9;padding-bottom:10px;margin-bottom:14px}
+      .hd h1{font-size:20px;margin:0;color:#6d28d9}.hd .sub{color:#666;font-size:12px}
+      .hd .org{text-align:right;font-size:12px;color:#444}
+      .info{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;font-size:13px;margin-bottom:14px}
+      .info b{color:#555}
+      .box{border:1px solid #ccc;border-radius:8px;padding:10px 12px;font-size:13px;min-height:70px;white-space:pre-wrap}
+      .kpis{display:flex;gap:10px;margin:10px 0 18px}
+      .kpi{flex:1;border:1px solid #ddd;border-top:3px solid #6d28d9;border-radius:8px;padding:8px;text-align:center}
+      .kpi .n{font-size:20px;font-weight:700;color:#6d28d9}.kpi .l{font-size:11px;color:#666}
+      h2{font-size:14px;margin:18px 0 6px;color:#333}
+      table{width:100%;border-collapse:collapse;font-size:11px}
+      th,td{border:1px solid #ccc;padding:5px 6px;text-align:left;vertical-align:top}
+      th{background:#f3effe;color:#4c1d95}
+      tr{page-break-inside:avoid}
+      .sign{display:flex;gap:40px;margin-top:48px;font-size:13px}
+      .sign div{flex:1;text-align:center}.sign .ln{border-bottom:1px dotted #888;height:34px;margin-bottom:6px}
+      .foot{margin-top:24px;font-size:11px;color:#888;text-align:right}
+      @media print{body{padding:0}}
+    </style></head><body>
+    <div class="hd">
+      <div><h1>${heading}</h1><div class="sub">ระบบแจ้งซ่อม MTD — Maintenance Request System</div></div>
+      <div class="org">พิมพ์เมื่อ ${new Date().toLocaleString('th-TH')}</div>
+    </div>
+    ${body}
+    <div class="foot">ออกโดยระบบแจ้งซ่อม MTD</div>
+    <script>window.onload=function(){setTimeout(function(){window.print()},500)}<\/script>
+    </body></html>`;
+  const w = window.open('', '_blank');
+  if (!w) return toast('⚠️ เบราว์เซอร์บล็อกป๊อปอัพ — อนุญาตป๊อปอัพแล้วลองใหม่');
+  w.document.write(html); w.document.close();
+}
+const pmDueText = (p) => { const st = pmDueState(p.nextDue); return p.nextDue ? `${p.nextDue}${st && st.label ? ` (${st.label})` : ''}` : '-'; };
+
+// 1) ใบบันทึก PM รายการเดียว
+function exportPmPDF(p) {
+  if (!p) return;
+  const eq = META.equipment.find((e) => e.id === p.equipmentId) || {};
+  const body = `
+    <div class="info">
+      <div><b>เลขที่ PM:</b> ${esc(p.no)}</div><div><b>วันที่ดำเนินการ:</b> ${esc(p.date || '-')}</div>
+      <div><b>รหัสเครื่องจักร:</b> ${esc(p.equipmentId || '-')}</div><div><b>ชื่อเครื่องจักร:</b> ${esc(p.equipmentName || '-')}</div>
+      <div><b>ประเภทเครื่อง:</b> ${esc(eq.type || '-')}</div><div><b>แผนก:</b> ${esc(p.dept || eq.dept || '-')}</div>
+      <div><b>สถานที่:</b> ${esc(eq.location || '-')}</div><div><b>S/N:</b> ${esc(eq.sn || '-')}</div>
+      <div><b>ประเภทงาน PM:</b> ${esc(p.type || '-')}</div><div><b>ผลการตรวจ:</b> ${esc(p.result || '-')}</div>
+      <div><b>ผู้ดำเนินการ:</b> ${esc(p.performedBy || '-')}</div><div><b>กำหนด PM ครั้งถัดไป:</b> ${esc(pmDueText(p))}</div>
+    </div>
+    <h2>รายละเอียด / สิ่งที่ดำเนินการ</h2>
+    <div class="box">${esc(p.detail || '-')}</div>
+    <div class="sign">
+      <div><div class="ln"></div>ผู้ดำเนินการ<br>(${esc(p.performedBy || '..............................')})</div>
+      <div><div class="ln"></div>ผู้ตรวจสอบ<br>(..............................)</div>
+    </div>`;
+  printDoc(`บันทึก PM ${p.no}`, '🛠️ ใบบันทึกการบำรุงรักษา (PM)', body, false);
+}
+
+// 2) รายงาน PM ทั้งหมด (ตามรายการที่แสดงอยู่ — ถ้าค้นหาไว้จะ export ตามผลค้นหา)
+function exportAllPmPDF() {
+  const rows = pmRows;
+  if (!rows.length) return toast('ไม่มีรายการ PM ให้ export');
+  const q = $('#searchPm').value.trim();
+  const states = rows.map((p) => pmDueState(p.nextDue));
+  const overdue = states.filter((s) => s && s.color === '#dc2626').length;
+  const soon = states.filter((s) => s && s.color === '#f59e0b').length;
+  const td = (v) => `<td>${esc(v || '-')}</td>`;
+  const body = `
+    ${q ? `<div style="font-size:13px;margin-bottom:6px"><b>ค้นหา:</b> ${esc(q)}</div>` : ''}
+    <div class="kpis">
+      <div class="kpi"><div class="n">${rows.length}</div><div class="l">รายการ PM</div></div>
+      <div class="kpi"><div class="n">${new Set(rows.map((p) => p.equipmentId)).size}</div><div class="l">เครื่องจักร</div></div>
+      <div class="kpi"><div class="n" style="color:#f59e0b">${soon}</div><div class="l">ใกล้ถึงกำหนด (≤${PM_SOON_DAYS} วัน)</div></div>
+      <div class="kpi"><div class="n" style="color:#dc2626">${overdue}</div><div class="l">เกินกำหนด</div></div>
+    </div>
+    <table><thead><tr><th>เลขที่</th><th>วันที่</th><th>เครื่องจักร</th><th>ประเภทงาน</th><th>ผลการตรวจ</th><th>ผู้ดำเนินการ</th><th>รายละเอียด</th><th>PM ครั้งถัดไป</th></tr></thead><tbody>
+      ${rows.map((p) => `<tr>${td(p.no)}${td(p.date)}<td><b>${esc(p.equipmentId || '-')}</b> ${esc(p.equipmentName || '')}</td>${td(p.type)}${td(p.result)}${td(p.performedBy)}${td(p.detail)}${td(pmDueText(p))}</tr>`).join('')}
+    </tbody></table>`;
+  printDoc('รายงานประวัติ PM', `🛠️ รายงานประวัติการบำรุงรักษา (PM)${q ? ' — ผลค้นหา' : ''}`, body, true);
+}
+$('#btnPmExportAll').addEventListener('click', exportAllPmPDF);
 $('#searchPm').addEventListener('input', debounce(loadPM, 300));
 $('#btnNewPm').addEventListener('click', () => openPmForm(null));
 let submittingPm = false;
