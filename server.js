@@ -16,13 +16,13 @@ if (fs.existsSync(envPath)) {
 const {
   STATUSES, PRIORITIES, PM_TYPES, getEquipment, usingSupabase, seedSupabase,
   listTickets, getTicket, createTicket, updateTicket, deleteTicket, stats, dashboard, lightTickets,
-  listPM, createPM, deletePM, pmDue,
+  listPM, createPM, deletePM, pmDue, updatePM, pmToNotify, markPmNotified,
   equipmentHistory, problemSummary, equipmentOverview, createEquipment,
   listBuildings, createBuilding, deleteBuilding, buildingOverview, buildingHistory, seedBuildings,
   listKB, createKB, deleteKB, seedKB,
   getSetting, setSetting,
 } = await import('./lib/store.js');
-const { notifyNew, notifyStatus, channelStatus, replyLine } = await import('./lib/notify.js');
+const { notifyNew, notifyStatus, notifyPmDue, channelStatus, replyLine } = await import('./lib/notify.js');
 const { verifyLineIdToken, liffConfigured, liffId } = await import('./lib/line.js');
 const {
   ROLES, login, logout, listUsers, createUser, deleteUser, resetPassword,
@@ -138,6 +138,20 @@ app.get('/api/tickets/:id/photo', wrap(async (req, res) => {
   res.send(Buffer.from(m[2], 'base64'));
 }));
 
+// เช็ค PM ใกล้ถึงกำหนดทุกเช้า (Vercel Cron เรียก — ดู vercel.json)
+// ปลอดภัยแม้ถูกเรียกซ้ำ: แต่ละรายการแจ้งครั้งเดียวต่อวันกำหนด จึงไม่ส่งซ้ำ/ไม่เปลืองโควตา
+// ถ้าตั้ง env CRON_SECRET ไว้ Vercel จะส่ง Authorization: Bearer <secret> มาด้วย และจะบังคับตรวจ
+app.get('/api/cron/pm-due', wrap(async (req, res) => {
+  const secret = process.env.CRON_SECRET;
+  if (secret && req.headers.authorization !== `Bearer ${secret}`) return res.status(401).json({ error: 'unauthorized' });
+  const { items, sent, due } = await pmToNotify(7);
+  if (!items.length) return res.json({ notified: 0 });
+  const r = await notifyPmDue(items);
+  // บันทึกว่าแจ้งแล้ว เฉพาะเมื่อส่งสำเร็จ (ถ้าโควตาเต็ม/ส่งไม่ได้ จะลองใหม่รอบถัดไป)
+  if (r.ok) await markPmNotified(items, sent, due);
+  res.json({ notified: r.ok ? items.length : 0, line: r });
+}));
+
 // Everything below requires login
 app.use('/api', authRequired);
 
@@ -247,6 +261,11 @@ app.post('/api/pm', roleRequired('admin', 'technician'), wrap(async (req, res) =
   if (!req.body.equipmentId) return res.status(400).json({ error: 'กรุณาเลือกเครื่องจักร' });
   const rec = await createPM({ ...req.body, performedBy: req.body.performedBy || req.user.name });
   res.status(201).json(rec);
+}));
+app.patch('/api/pm/:id', roleRequired('admin', 'technician'), wrap(async (req, res) => {
+  const rec = await updatePM(req.params.id, req.body);
+  if (!rec) return res.status(404).json({ error: 'ไม่พบรายการ PM' });
+  res.json(rec);
 }));
 app.delete('/api/pm/:id', roleRequired('admin', 'technician'), wrap(async (req, res) => res.json({ ok: await deletePM(req.params.id) })));
 

@@ -1,6 +1,9 @@
 {
   "version": 2,
   "regions": ["sin1"],
+  "crons": [
+    { "path": "/api/cron/pm-due", "schedule": "0 1 * * *" }
+  ],
   "builds": [
     { "src": "server.js", "use": "@vercel/node" }
   ],

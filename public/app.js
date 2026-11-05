@@ -149,11 +149,13 @@ async function init() {
   loadDashboard();
   renderEquipment();
   // เปิดใบแจ้งซ่อมอัตโนมัติเมื่อมากับลิงก์ ?ticket=<เลขที่> (จากปุ่มในการ์ด LINE)
-  const tno = new URLSearchParams(location.search).get('ticket');
-  if (tno) {
-    openDetail(tno).catch((e) => toast('⚠️ เปิดใบไม่สำเร็จ: ' + e.message));
-    history.replaceState({}, '', location.pathname);
-  }
+  const qs = new URLSearchParams(location.search);
+  const tno = qs.get('ticket');
+  if (tno) openDetail(tno).catch((e) => toast('⚠️ เปิดใบไม่สำเร็จ: ' + e.message));
+  // ?view=pm (ลิงก์จากข้อความแจ้งเตือน PM) -> เปิดแท็บนั้น
+  const v = qs.get('view');
+  if (v && canEdit()) $(`.tab[data-view="${CSS.escape(v)}"]`)?.click();
+  if (tno || v) history.replaceState({}, '', location.pathname);
 }
 
 // ---------- dashboard date filter ----------
@@ -940,39 +942,75 @@ async function openDetail(id) {
 }
 
 // ---------- PM ----------
+// สถานะกำหนด PM ครั้งถัดไป: เกินกำหนด / ใกล้ถึง (ภายใน 7 วัน) / ปกติ
+const PM_SOON_DAYS = 7;
+function pmDueState(nextDue) {
+  if (!nextDue) return null;
+  const today = new Date().toISOString().slice(0, 10);
+  const days = Math.round((new Date(nextDue) - new Date(today)) / 86400000);
+  if (days < 0) return { color: '#dc2626', label: `เกินกำหนด ${-days} วัน` };
+  if (days <= PM_SOON_DAYS) return { color: '#f59e0b', label: days === 0 ? 'ครบกำหนดวันนี้' : `อีก ${days} วัน` };
+  return { color: '#0d9488', label: '' };
+}
 function pmRow(p) {
-  const overdue = p.nextDue && p.nextDue < new Date().toISOString().slice(0, 10);
-  return `<div class="ticket" style="--sc:#0d9488">
+  const st = pmDueState(p.nextDue);
+  return `<div class="ticket pm-item" data-id="${esc(p.id)}" style="--sc:${st && st.label ? st.color : '#0d9488'};cursor:pointer">
     <div><div class="no">${esc(p.no)}</div><div class="meta">${esc(p.date)}</div></div>
     <div>
       <div class="det"><b>${esc(p.equipmentId)}</b> ${esc(p.equipmentName)}</div>
       <div class="meta">${esc(p.type)} · โดย ${esc(p.performedBy || '-')} · ผล: ${esc(p.result)}</div>
       ${p.detail ? `<div class="meta">${esc(p.detail)}</div>` : ''}
-      ${p.nextDue ? `<span class="pri" style="color:${overdue ? '#dc2626' : '#0d9488'}">⏰ PM ครั้งถัดไป: ${esc(p.nextDue)}${overdue ? ' (เกินกำหนด)' : ''}</span>` : ''}
+      ${st ? `<span class="pri" style="color:${st.color}">⏰ PM ครั้งถัดไป: ${esc(p.nextDue)}${st.label ? ` (${st.label})` : ''}</span>` : ''}
     </div>
-    ${canEdit() ? `<button class="btn-ghost pm-del" data-id="${p.id}" style="font-size:13px">🗑️ ลบ</button>` : '<span></span>'}
+    ${canEdit() ? `<button class="btn-ghost pm-del" data-id="${esc(p.id)}" style="font-size:13px">🗑️ ลบ</button>` : '<span></span>'}
   </div>`;
 }
+let pmCache = {};
 async function loadPM() {
   const q = $('#searchPm').value.trim();
   const rows = await api('/api/pm' + (q ? '?q=' + encodeURIComponent(q) : ''));
+  pmCache = Object.fromEntries(rows.map((p) => [p.id, p]));
   $('#pmList').innerHTML = rows.map(pmRow).join('') || '<p style="color:var(--muted)">ยังไม่มีประวัติ PM</p>';
-  $$('#pmList .pm-del').forEach((b) => b.addEventListener('click', async () => {
+  $$('#pmList .pm-item').forEach((el) => el.addEventListener('click', () => openPmForm(pmCache[el.dataset.id])));
+  $$('#pmList .pm-del').forEach((b) => b.addEventListener('click', async (e) => {
+    e.stopPropagation(); // ไม่ให้เปิดหน้าแก้ไขตอนกดลบ
     if (!confirm('ลบรายการ PM นี้?')) return;
     await api('/api/pm/' + b.dataset.id, { method: 'DELETE' });
     toast('ลบแล้ว'); loadPM();
   }));
 }
+// เปิดฟอร์ม PM: ไม่ส่ง rec = บันทึกใหม่, ส่ง rec = ดู/แก้ไขรายการเดิม (ผู้แจ้งดูได้อย่างเดียว)
+function openPmForm(rec) {
+  const f = $('#formPm');
+  f.reset();
+  f.dataset.editId = rec ? rec.id : '';
+  const readOnly = !canEdit();
+  $('#pmTitle').textContent = rec ? `${readOnly ? 'ข้อมูล' : 'แก้ไข'} PM ${rec.no}` : 'บันทึกการบำรุงรักษา (PM)';
+  if (rec) {
+    ['equipmentId', 'type', 'date', 'performedBy', 'nextDue', 'result', 'detail'].forEach((k) => { if (f[k]) f[k].value = rec[k] || ''; });
+  } else f.date.value = new Date().toISOString().slice(0, 10);
+  [...f.elements].forEach((el) => { if (el.name) el.disabled = readOnly; });
+  $('#pmSubmit').hidden = readOnly;
+  $('#pmSubmit').textContent = rec ? '💾 บันทึกการแก้ไข' : 'บันทึก';
+  $('#modalPm').classList.add('open');
+}
 $('#searchPm').addEventListener('input', debounce(loadPM, 300));
-$('#btnNewPm').addEventListener('click', () => { $('#formPm').date.value = new Date().toISOString().slice(0, 10); $('#modalPm').classList.add('open'); });
+$('#btnNewPm').addEventListener('click', () => openPmForm(null));
+let submittingPm = false;
 $('#formPm').addEventListener('submit', async (e) => {
   e.preventDefault();
+  if (submittingPm) return; // กันกดซ้ำ
+  submittingPm = true; $('#pmSubmit').disabled = true;
   const body = Object.fromEntries(new FormData(e.target));
+  const editId = e.target.dataset.editId;
   try {
-    const rec = await api('/api/pm', { method: 'POST', body: JSON.stringify(body) });
-    e.target.reset(); $('#modalPm').classList.remove('open');
-    toast(`✅ บันทึก PM แล้ว: ${rec.no}`); loadPM(); loadDashboard();
+    const rec = editId
+      ? await api('/api/pm/' + editId, { method: 'PATCH', body: JSON.stringify(body) })
+      : await api('/api/pm', { method: 'POST', body: JSON.stringify(body) });
+    e.target.reset(); e.target.dataset.editId = ''; $('#modalPm').classList.remove('open');
+    toast(editId ? `💾 แก้ไข PM ${rec.no} แล้ว` : `✅ บันทึก PM แล้ว: ${rec.no}`); loadPM(); loadDashboard();
   } catch (err) { toast('⚠️ ' + err.message); }
+  finally { submittingPm = false; $('#pmSubmit').disabled = false; }
 });
 
 // ---------- Users (admin) ----------

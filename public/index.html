@@ -364,7 +364,7 @@
   <!-- NEW PM MODAL -->
   <div class="modal-bg" id="modalPm">
     <div class="modal">
-      <div class="modal-head"><h2>บันทึกการบำรุงรักษา (PM)</h2><button class="x" data-close>✕</button></div>
+      <div class="modal-head"><h2 id="pmTitle">บันทึกการบำรุงรักษา (PM)</h2><button class="x" data-close>✕</button></div>
       <form id="formPm" class="modal-body">
         <label>เครื่องจักร / อุปกรณ์ *
           <select name="equipmentId" id="pmEquipment" required><option value="">— เลือกเครื่องจักร —</option></select>
@@ -381,7 +381,7 @@
         <label>รายละเอียด / สิ่งที่ดำเนินการ<textarea name="detail" rows="3"></textarea></label>
         <div class="modal-foot">
           <button type="button" class="btn-ghost" data-close>ยกเลิก</button>
-          <button type="submit" class="btn-primary" style="color:#fff;background:var(--brand)">บันทึก</button>
+          <button type="submit" id="pmSubmit" class="btn-primary" style="color:#fff;background:var(--brand)">บันทึก</button>
         </div>
       </form>
     </div>
