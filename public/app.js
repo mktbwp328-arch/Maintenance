@@ -304,13 +304,16 @@ function ticketRow(t) {
     </div>
   </div>`;
 }
+let ticketsReq = 0;
 async function loadTickets() {
   const q = $('#search').value.trim();
   const status = $('#filterStatus').value;
   const params = new URLSearchParams();
   if (q) params.set('q', q);
   if (status) params.set('status', status);
+  const my = ++ticketsReq;
   const rows = await api('/api/tickets?' + params);
+  if (my !== ticketsReq) return; // มีการค้นหาใหม่กว่าแล้ว ทิ้งผลเก่า
   $('#ticketList').innerHTML = rows.map(ticketRow).join('') || '<p style="color:var(--muted)">ไม่พบรายการ</p>';
   bindTicketRows('#ticketList');
 }

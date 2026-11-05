@@ -15,7 +15,7 @@ if (fs.existsSync(envPath)) {
 
 const {
   STATUSES, PRIORITIES, PM_TYPES, getEquipment, usingSupabase, seedSupabase,
-  listTickets, getTicket, createTicket, updateTicket, deleteTicket, stats, dashboard,
+  listTickets, getTicket, createTicket, updateTicket, deleteTicket, stats, dashboard, lightTickets,
   listPM, createPM, deletePM, pmDue,
   equipmentHistory, problemSummary, equipmentOverview, createEquipment,
   listBuildings, createBuilding, deleteBuilding, buildingOverview, buildingHistory, seedBuildings,
@@ -205,7 +205,8 @@ app.delete('/api/buildings/:name', roleRequired('admin'), wrap(async (req, res) 
 app.get('/api/equipment/:id/history', wrap(async (req, res) => res.json(await equipmentHistory(req.params.id))));
 
 // ---------- Tickets ----------
-app.get('/api/tickets', wrap(async (req, res) => res.json(await listTickets({ status: req.query.status, q: req.query.q, createdBy: ownScope(req) }))));
+// รายการงานซ่อม: ดึงแบบเบา + กรองสถานะ/คำค้นหาในฐานข้อมูล (หน้ารายละเอียดดึงข้อมูลเต็มจาก /api/tickets/:id)
+app.get('/api/tickets', wrap(async (req, res) => res.json(await lightTickets({ status: req.query.status, q: (req.query.q || '').trim(), createdBy: ownScope(req) }))));
 app.get('/api/tickets/:id', wrap(async (req, res) => {
   const t = await getTicket(req.params.id);
   if (!t) return res.status(404).json({ error: 'not found' });
