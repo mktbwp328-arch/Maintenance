@@ -196,7 +196,8 @@ async function loadDashboard() {
   const params = new URLSearchParams();
   if (DASH_RANGE.from) params.set('from', DASH_RANGE.from);
   if (DASH_RANGE.to) params.set('to', DASH_RANGE.to);
-  const s = await api('/api/stats?' + params);
+  const dash = await api('/api/dashboard?' + params);
+  const s = dash.stats;
   $('#dfLabel').textContent = rangeLabel();
   const order = META.statuses;
   // ซ่อนการ์ด KPI "ปิดงาน" บนแดชบอร์ด (แต่ยังนับรวมใน "ทั้งหมด" และกราฟตามปกติ)
@@ -229,20 +230,17 @@ async function loadDashboard() {
   // full summary block (respects the same date filter)
   const showSum = ME?.role !== 'reporter';
   $('#dashSummary').style.display = showSum ? '' : 'none';
-  if (showSum) await loadDashSummary(params);
+  if (showSum && dash.summary) renderDashSummary(dash.summary);
 
-  let recent = await api('/api/tickets');
-  if (DASH_RANGE.from) recent = recent.filter((t) => (t.createdAt || '').slice(0, 10) >= DASH_RANGE.from);
-  if (DASH_RANGE.to) recent = recent.filter((t) => (t.createdAt || '').slice(0, 10) <= DASH_RANGE.to);
-  $('#recentList').innerHTML = recent.slice(0, 6).map(ticketRow).join('') ||
+  // 6 ใบล่าสุดในช่วงวันที่ — กรองมาจากเซิร์ฟเวอร์แล้ว
+  $('#recentList').innerHTML = dash.recent.map(ticketRow).join('') ||
     '<p style="color:var(--muted)">ไม่มีรายการในช่วงเวลานี้</p>';
   bindTicketRows('#recentList');
 }
 
 // dashboard summary block (same data as the สรุปปัญหา page, filtered by date)
 let dProblemChart, dPriorityChart, dDeptChart;
-async function loadDashSummary(params) {
-  const s = await api('/api/summary?' + params);
+function renderDashSummary(s) {
   $('#dashSumKpi').innerHTML = [
     ['ทั้งหมด', s.total, '#475569'], ['กำลังดำเนินการ', s.open, '#fbbf24'],
     ['ปิดงานแล้ว', s.closed, '#34d399'], ['เวลาซ่อมเฉลี่ย (ชม.)', s.avgResolveHours, '#8b5cf6'],

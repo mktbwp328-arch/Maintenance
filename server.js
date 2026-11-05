@@ -15,7 +15,7 @@ if (fs.existsSync(envPath)) {
 
 const {
   STATUSES, PRIORITIES, PM_TYPES, getEquipment, usingSupabase, seedSupabase,
-  listTickets, getTicket, createTicket, updateTicket, deleteTicket, stats,
+  listTickets, getTicket, createTicket, updateTicket, deleteTicket, stats, dashboard,
   listPM, createPM, deletePM, pmDue,
   equipmentHistory, problemSummary, equipmentOverview, createEquipment,
   listBuildings, createBuilding, deleteBuilding, buildingOverview, buildingHistory, seedBuildings,
@@ -173,6 +173,11 @@ app.post('/api/line/settings', roleRequired('admin'), wrap(async (req, res) => {
 app.get('/api/stats', wrap(async (req, res) => {
   const s = await stats({ from: req.query.from, to: req.query.to, createdBy: ownScope(req) });
   res.json({ ...s, pmDue: req.user.role === 'reporter' ? [] : await pmDue(30) });
+}));
+// แดชบอร์ดในคำขอเดียว (แทน stats + summary + tickets ที่เคยยิงแยก 3 ครั้ง)
+app.get('/api/dashboard', wrap(async (req, res) => {
+  const staff = req.user.role !== 'reporter';
+  res.json(await dashboard({ from: req.query.from, to: req.query.to, createdBy: ownScope(req) }, { pmDue: staff, summary: staff }));
 }));
 app.get('/api/summary', wrap(async (req, res) => res.json(await problemSummary({ from: req.query.from, to: req.query.to, createdBy: ownScope(req) }))));
 app.get('/api/equipment-overview', wrap(async (req, res) => res.json(await equipmentOverview())));
