@@ -304,18 +304,26 @@ function ticketRow(t) {
     </div>
   </div>`;
 }
-let ticketsReq = 0;
-async function loadTickets() {
+// โหลดรายการทีละหน้า (PAGE ใบ) + ปุ่ม "แสดงเพิ่ม"
+const PAGE = 50;
+let ticketsReq = 0, ticketRows = [];
+async function loadTickets(more) {
+  more = more === true; // event listener ส่ง Event เข้ามา — นับเป็น "โหลดใหม่"
   const q = $('#search').value.trim();
   const status = $('#filterStatus').value;
-  const params = new URLSearchParams();
+  const params = new URLSearchParams({ limit: PAGE + 1, offset: more ? ticketRows.length : 0 });
   if (q) params.set('q', q);
   if (status) params.set('status', status);
   const my = ++ticketsReq;
   const rows = await api('/api/tickets?' + params);
   if (my !== ticketsReq) return; // มีการค้นหาใหม่กว่าแล้ว ทิ้งผลเก่า
-  $('#ticketList').innerHTML = rows.map(ticketRow).join('') || '<p style="color:var(--muted)">ไม่พบรายการ</p>';
+  const hasMore = rows.length > PAGE; // ขอเกินมา 1 ใบเพื่อรู้ว่ายังมีต่อไหม
+  ticketRows = (more ? ticketRows : []).concat(rows.slice(0, PAGE));
+  $('#ticketList').innerHTML = (ticketRows.map(ticketRow).join('') || '<p style="color:var(--muted)">ไม่พบรายการ</p>') +
+    (hasMore ? `<button class="btn-ghost" id="ticketsMore" style="width:100%;margin-top:10px">แสดงเพิ่ม (แสดงอยู่ ${ticketRows.length} ใบ)</button>` : '');
   bindTicketRows('#ticketList');
+  const btn = $('#ticketsMore');
+  if (btn) btn.addEventListener('click', () => { btn.disabled = true; btn.textContent = 'กำลังโหลด...'; loadTickets(true); });
 }
 function bindTicketRows(sel) {
   $$(sel + ' .ticket').forEach((el) => el.addEventListener('click', () => openDetail(el.dataset.id)));

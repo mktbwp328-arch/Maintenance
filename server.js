@@ -206,7 +206,12 @@ app.get('/api/equipment/:id/history', wrap(async (req, res) => res.json(await eq
 
 // ---------- Tickets ----------
 // รายการงานซ่อม: ดึงแบบเบา + กรองสถานะ/คำค้นหาในฐานข้อมูล (หน้ารายละเอียดดึงข้อมูลเต็มจาก /api/tickets/:id)
-app.get('/api/tickets', wrap(async (req, res) => res.json(await lightTickets({ status: req.query.status, q: (req.query.q || '').trim(), createdBy: ownScope(req) }))));
+// ?limit=&offset= สำหรับโหลดทีละหน้า (ไม่ส่ง limit = ได้ทั้งหมดเหมือนเดิม)
+app.get('/api/tickets', wrap(async (req, res) => {
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 0, 0), 500);
+  const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+  res.json(await lightTickets({ status: req.query.status, q: (req.query.q || '').trim(), createdBy: ownScope(req), limit, offset }));
+}));
 app.get('/api/tickets/:id', wrap(async (req, res) => {
   const t = await getTicket(req.params.id);
   if (!t) return res.status(404).json({ error: 'not found' });
